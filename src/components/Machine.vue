@@ -17,7 +17,7 @@
             :data="tableData"
             border
             style="width: 100%">
-            <el-table-column type="index" width="40"></el-table-column>
+            <el-table-column type="index" width="30"></el-table-column>
             <el-table-column v-for="(item, i) in columns" :prop="item.tname" :label="item.tmark" :key="i"></el-table-column>
             <el-table-column label="操作">
                 <template slot-scope="scope">
@@ -37,40 +37,6 @@ export default {
             work_orderId: '',
             machine_name: '',
             titles: ['设备名称','连接状态','生产工单','产品型号','计划数量','计划开始时间','实际开始时间','良品数量','不良数量','稼动效率'],
-            // columns: [{
-            //     tmark: '日期',
-            //     tname: 'date'
-            // },
-            // {
-            //     tmark: '姓名',
-            //     tname: 'name'
-            // },
-            // {
-            //     tmark: '地址',
-            //     tname: 'address'
-            // }],
-            // tableData: [{
-            //     id: 1,
-            //     date: '2016-05-02',
-            //     name: '王小虎',
-            //     address: '上海市普陀区金沙江路 1518 弄'
-            // }, {
-            //     id: 2,
-            //     date: '2016-05-04',
-            //     name: '王小虎',
-            //     address: '上海市普陀区金沙江路 1517 弄'
-            // }, {
-            //     id: 3,
-            //     date: '2016-05-01',
-            //     name: '王小虎',
-            //     address: '上海市普陀区金沙江路 1519 弄'
-            // }, {
-            //     id: 4,
-            //     date: '2016-05-03',
-            //     name: '王小虎',
-            //     address: '上海市普陀区金沙江路 1516 弄'
-            // }]
-            // result: ['fkjskfweakksjk',3,4,754,null,'sdfew', 'sdf213244',2321, 232,null]
             result: [],
             isFullscreen: false
         }

@@ -14,4 +14,8 @@ Date.prototype.Format = function (fmt) {
         if (new RegExp("(" + k + ")").test(fmt)) fmt = fmt.replace(RegExp.$1, (RegExp.$1.length == 1) ? (o[k]) : (("00" + o[k]).substr(("" + o[k]).length)));
             return fmt;
     }
-export default new Date().Format("yyyy/MM/dd hh:mm:ss")
+
+function getCurrentTime (time) {
+    return (time || new Date()).Format("yyyy/MM/dd hh:mm:ss")
+}
+export default getCurrentTime

@@ -8,6 +8,11 @@
                 </el-select>
                 <el-button size="mini" v-show="isShow" plain class="changeEquip" @click="ChangeEquip">重新选择设备</el-button>
             </el-form-item>
+            <el-form-item label="操作员" prop="operator">
+                <el-select v-model="form.operator" placeholder="请选择操作员">
+                    <el-option v-for="(item,i) in operators" :key="i" :label="item.S_NAME" :value="item.S_NAME"></el-option>
+                </el-select>
+            </el-form-item>
             <el-form-item label="密码" prop="password">
                 <el-input v-model="form.password" type="password" @keyup.enter.native="submitForm"></el-input>
             </el-form-item>
@@ -24,23 +29,14 @@
 <script>
 import axios from 'axios'
 
-// const moni = [
-//     {
-//         S_NAME: 'sd'
-//     },
-//     {
-//         S_NAME: 'qw'
-//     },
-//     {
-//         S_NAME: 'er'
-//     }
-// ]
 export default {
     data() {
         return {
             equipmentsList: [],
+            operators: [{name:"操作员1", author: 1},{name:"操作员2", author: 0},{name:"操作员3", author: 1}],
             form: {
                 userName: '',
+                operator: '',
                 password: ''
             },
             // 表单前端校验
@@ -55,28 +51,40 @@ export default {
             // 是否记住设备名
             remember: true,
             // 重新选择设备显示隐藏
-            isShow: false
+            isShow: false,
+            equipmentsOnline: []
         }
     },
     created() {
-        // 获取缓存中的设备名
-        // localStorage.setItem('userName', 'jachine2')
-        const userName = localStorage.getItem('userName')
-        if(userName != null) {
-            this.form.userName = userName
-            // 有缓存，显示重新获取设备按钮，此时不获取设备列表直接return出去
-            this.isShow = true
-            return
-        }
-        // 获取设备名列表
+        
+        // 获取在线设备数组(要先在下面的return前获取到)
+        this.getEquipmentOnline()
+
+        // 获取设备名,操作员列表
         this.getEquipments()
     },
     methods: {
+        getEquipmentOnline() {
+            axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/server/getOnline')
+            // axios.get(this.killBrowserUrl + 'server/getOnline')
+            .then((res) => {
+                // console.log(res)
+                if(res.data.code === 200) {
+                    this.equipmentsOnline = res.data.content
+                } 
+            }).catch(err => err)
+        },
         // 登录校验用户名和密码
         submitForm() {
-            const {userName, password} = this.form
+            const {userName, operator, password} = this.form
             this.$refs.form.validate(valid => {
                 if(valid) {
+                    // 判断已连接设备中是否当前设备
+                    const index = this.equipmentsOnline.findIndex(item => item.name === userName)
+                    if(index === -1) {
+                        this.$message.error('当前机台未连接，请先上线')
+                        return
+                    }
                     axios.get(this.httpUrl + 'GetLogin?u=' + userName + '&p=' + password)
                     .then((res) => {
                         // console.log(res)
@@ -84,6 +92,12 @@ export default {
                             // 如果用户勾选了记住设备名则将用户名缓存
                             if(this.remember) {
                                 localStorage.setItem('userName', userName)
+                                localStorage.setItem('operator', operator)
+                            }
+                            // 权限为1，跳至开始调机的工单页面，否则跳至开始生产的工单页面
+                            const currentOperator = this.operators.find(item => item.S_NAME === this.form.operator)
+                            if(currentOperator.S_AUTHOR === '1'){
+                                return this.$router.push('/work_order2')
                             }
                             this.$router.push('/work_order')
                         }else{
@@ -96,19 +110,31 @@ export default {
         // 取消重置
         cancel() {
             this.$refs.form.resetFields()
+            // window.close()
         },
         // 获取设备名称
         getEquipments() {
+            // 获取缓存中的设备名
+            // localStorage.setItem('userName', 'machine03')
+            const userName = localStorage.getItem('userName')
             axios.get(this.httpUrl + 'GetUser')
             .then((res) => {
                 // console.log(res)
-                this.equipmentsList = res.data
+                this.operators = res.data.user
+                if(userName != null) {
+                    this.form.userName = userName
+                    // 有缓存，显示重新获取设备按钮，此时不获取设备列表直接return出去
+                    this.isShow = true
+                    return
+                }
+                this.equipmentsList = res.data.machine
             }).catch(err => err)
         },
         // 重新选择设备
         ChangeEquip() {
             // 清缓存中的userName并刷新页面重新获取设备
             localStorage.removeItem('userName')
+            localStorage.removeItem('operator')
             location.reload()
         }
     }

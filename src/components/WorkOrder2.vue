@@ -19,11 +19,20 @@
         <exit-btn class="btn_group"></exit-btn>
       </div>
     </div>
+    <div class="btnwrap">
+      <el-button type="info" @click="detailWorkOrder(currentRow)">查看详情</el-button>
+      <el-button type="primary" @click="tuningStart">开始调机</el-button>
+      <el-button type="warning" @click="toExamine">首/末/巡检</el-button>
+      <el-button type="success" @click="tuningEnd">结束调机</el-button>
+    </div>
+    <!-- 工单列表 -->
     <el-table
       :data="tableData"
       ref="tableRef"
       border
       :height="tableHeight"
+      highlight-current-row
+      @current-change="handleCurrentChange"
       style="width: 100%">
       <el-table-column type="index" width="42"></el-table-column>
       <el-table-column
@@ -33,12 +42,6 @@
         :key="i"
         :width="i===0 ? '65' : ''"
         :min-width="item.S_NAME==='AW_LINE' ? '120' : ''">
-      </el-table-column>
-      <el-table-column label="操作" width="192">
-        <template slot-scope="scope">
-          <el-button size="mini" type="info" @click="detailWorkOrder(scope.row)">查看详情</el-button>
-          <el-button size="mini" type="primary" @click="jumpTo(scope.row)" :disabled="scope.row.AW_STATUS === 0 ? false : true">{{scope.row.AW_STATUS === 0?'开始生产':'生产完成'}}</el-button>
-        </template>
       </el-table-column>
     </el-table>
     <!-- 上下按钮 -->
@@ -92,7 +95,11 @@ export default {
       // 表格高度
       tableHeight: 0,
       // 是否显示移动按钮
-      isMoveButton: true
+      isMoveButton: true,
+      // 当前行信息
+      currentRow: null,
+      userName: localStorage.getItem('userName'),
+      operator: localStorage.getItem('operator')
     }
   },
   // currentdata: null,
@@ -106,7 +113,7 @@ export default {
   mounted() {
     // 定义表格高度
     setTimeout(() => {
-      this.tableHeight = window.innerHeight - this.$refs.tableRef.$el.offsetTop -30
+      this.tableHeight = window.innerHeight - this.$refs.tableRef.$el.offsetTop -60
     }, 100)
     
   },
@@ -129,29 +136,18 @@ export default {
       this.isMoveButton = true
     }
   },
-  // beforeDestroy() {
-  //   // 当前条有数据时，通过事件总线传送给看板页面
-  //   if(this.currentdata != null) {
-  //     this.$EventBus.$emit("sendMsg", this.currentdata)
-  //   }
-  // },
   methods: {
     getWorkList(time, isNew) {
-      const userName = localStorage.getItem('userName')
       // axios.get(this.httpUrl + 'GetTitle?page=APS_WORKER_SIMPLE')
       axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/getApsWorkerTitle_copy')
       .then((res) => {
-        // console.log(res)
         this.columns = res.data
       })
       .catch(err => err)
-      // console.log(userName)
-      // 有选择时间用选择的时间，没有用当前时间截取出年月日
       const baseDate = time || getCurrentTime(new Date()).split(' ')[0]
-      // console.log(baseDate)
-      axios.get(this.httpUrl + 'GetApsWorker?machine=' + userName + '&time=' + baseDate)
+      axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/GetApsWorker?machine=' + this.userName + '&time=' + baseDate)
+      // axios.get(this.httpUrl + 'GetApsWorker?machine=' + this.userName + '&time=' + baseDate)
       .then((res) => {
-        // console.log(res)
         this.tableData = res.data
         if(isNew === true) {
           this.$message({
@@ -168,43 +164,10 @@ export default {
         this.columnsAll = res.data
       })
     },
-    jumpTo(row) {
-      // console.log(row)
-      this.$store.dispatch('handleChangeOrder', row)
-      // this.currentdata = row
-      this.$confirm('点击确定后，将会向机台写入制令信息，是否继续？', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
-        // 工单号传参
-        const work_Id = row.AW_PRODUCT_HALF
-        const worker = row.AW_APS_WORKER
-        // 获取缓存中设备名首字母并转为小写
-        const userName = localStorage.getItem('userName')
-        // 校验是否通过允许跳转
-        let formdata = new FormData()  
-        formdata.append('machineName', userName)
-        formdata.append('worker', worker)
-        // axios.get(this.writeUrl +'cmd/writeMakeInfo?machineName='+userName+'&worker='+worker)
-        axios.post(this.writeUrl +'cmd/writeMakeInfo', formdata)
-        .then((res) => {
-          // console.log(res)
-          // 写入失败，提示手动输入
-          if(res.data.code != 200) {
-            this.$message.error('指令信息写入失败！请在机台手动输入。')
-          }
-        }).catch(() => this.$message.error('指令信息写入失败！请在机台手动输入。'))
-        // 跳转至物料校验页面
-        this.$router.push('/materials?product=' + work_Id + '&work=' + worker)
-      }).catch(() => {
-        this.$message({
-          type: 'info',
-          message: '已取消生产'
-        })       
-      })
-    },
     detailWorkOrder(row) {
+      if(row === null) {
+        return this.$message.error('请先选择制令单号！')
+      }
       // console.log(this.columnsAll)
       for(let i = 0; i < this.columnsAll.length; i++) {
         // console.log(this.columnsAll[i].S_NAME)
@@ -246,6 +209,44 @@ export default {
       }
       // 把当前滚动高度保存到上一次滚动高度中，留在最后比较用
       this.preHeight = height
+    },
+    handleCurrentChange(currentRow) {
+      this.currentRow = currentRow
+    },
+    tuningStart() {
+      if(this.currentRow === null) {
+        return this.$message.error('请先选择制令单号！')
+      }
+      // 跳至物料验证页面
+      this.$router.push('/materials?type=tune&work='+this.currentRow.AW_APS_WORKER+'&product='+this.currentRow.AW_PRODUCT_HALF)
+    },
+    tuningEnd() {
+      if(this.currentRow === null) {
+        return this.$message.error('请先选择制令单号！')
+      }
+      const MT_WORKER = this.currentRow.AW_APS_WORKER
+      const MT_PRODUCT_HALF = this.currentRow.AW_PRODUCT_HALF
+      const MT_MACHINE = this.userName
+      const MT_DOUSER = this.operator
+      const MT_ENDTIME = getCurrentTime(new Date())
+      // 开始调机，开始时间传后台
+      axios.post(this.httpUrl + 'Tune', {MT_WORKER,MT_PRODUCT_HALF,MT_MACHINE,MT_DOUSER,MT_ENDTIME})
+      .then((res) => {
+          // console.log(res)
+          if(res.data.code === 200) {
+            this.$message.success('调机结束时间已保存成功！')
+          }else if(res.data.code === 401) {
+            this.$message.error(res.data.value)
+          }else{
+              this.$message.error('结束时间写入失败，请重试！')
+          }
+      }).catch(err => err)
+    },
+    toExamine() {
+      if(this.currentRow === null) {
+        return this.$message.error('请先选择制令单号！')
+      }
+      this.$router.push('/examine?work='+this.currentRow.AW_APS_WORKER+'&product='+this.currentRow.AW_PRODUCT_HALF)
     }
   }
 }
@@ -260,6 +261,10 @@ export default {
 }
 .btn_group{
   margin-left: 10px;
+}
+.btnwrap{
+  margin-bottom: 20px;
+  text-align: right;
 }
 @media screen and (max-width: 1100px) {
   .el-table{

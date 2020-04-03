@@ -3,13 +3,23 @@ import Vuex from 'vuex'
 
 Vue.use(Vuex)
 
-export default new Vuex.Store({
+const store = new Vuex.Store({
   state: {
+    currentOrderData: {}
   },
   mutations: {
+    changeOrderData(state, data) {
+      state.currentOrderData = data
+    }
   },
   actions: {
+    handleChangeOrder(context, data) {
+      context.commit('changeOrderData', data)
+    }
   },
-  modules: {
+  getter: {
+
   }
 })
+
+export default store
