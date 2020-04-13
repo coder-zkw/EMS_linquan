@@ -5,11 +5,11 @@
       <p class="tip">...载入中...</p>
     </div>
     <footer>
-      <button @click="startRecognize">1.创建控件</button>
+      <!-- <button @click="startRecognize">1.创建控件</button>
       <button @click="startScan">2.开始扫描</button>
       <button @click="cancelScan">3.结束扫描</button>
-
-      <button @click="closeScan">4.关闭控件</button>
+      <button @click="closeScan">4.关闭控件</button> -->
+      <el-button type="primary" @click="exitSao">退出扫描</el-button>
     </footer>
   </div>
 </template>
@@ -23,15 +23,17 @@
         codeUrl: '',
       }
     },
+    mounted() {
+      this.startRecognize()
+      this.startScan()
+    },
     methods: {
       // 创建扫描控件
       startRecognize () {
-        let that = this
+        // let that = this
         if (!window.plus) return
         scan = new plus.barcode.Barcode('bcid')
-        scan.onmarked = onmarked
-
-        function onmarked (type, result, file) {
+        scan.onmarked = (type, result, file) => {
           switch (type) {
             case plus.barcode.QR:
               type = 'QR'
@@ -47,10 +49,23 @@
               break
           }
           result = result.replace(/\n/g, '')
-          that.codeUrl = result
-          alert(result)
-          that.closeScan()
 
+          let res_scan = this.$store.state.res_scan
+          const isHave = res_scan.split(',').findIndex(item => item===result)
+          if(isHave != -1) {
+            this.$message.error('此条码已扫描！')
+          }else{
+            if(res_scan != '') {
+              res_scan += ','+result
+            }else{
+              res_scan = result
+            }
+            this.$store.dispatch('handleChangeScans', res_scan)
+          }
+
+          this.codeUrl = result
+          // alert(result)
+          this.closeScan()
         }
       },
       // 开始扫描
@@ -67,33 +82,36 @@
       closeScan () {
         if (!window.plus) return
         scan.close()
+        // 返回校验页面
+        this.$router.go(-1)
       },
+      exitSao() {
+        // this.$router.go(-1)
+        this.$router.replace('/materials_1')
+      }
     }
   }
 </script>
-<style lang="less">
+<style scoped>
   .scan {
     height: 100%;
-
-    #bcid {
-      width: 100%;
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: 0;
-      bottom: 3rem;
-      text-align: center;
-      color: #fff;
-      background: #ccc;
-    }
-
-    footer {
-      position: absolute;
-      left: 0;
-      bottom: 1rem;
-      height: 2rem;
-      line-height: 2rem;
-      z-index: 2;
-    }
+  }
+  #bcid {
+    width: 100%;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 6rem;
+    text-align: center;
+    color: #fff;
+    background: #ccc;
+  }
+  footer {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-49px);
+    bottom: 2rem;
+    z-index: 2;
   }
 </style>

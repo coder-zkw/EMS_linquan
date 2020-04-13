@@ -33,7 +33,7 @@ export default {
     data() {
         return {
             equipmentsList: [],
-            operators: [{name:"操作员1", author: 1},{name:"操作员2", author: 0},{name:"操作员3", author: 1}],
+            operators: [],
             form: {
                 userName: '',
                 operator: '',
@@ -43,6 +43,9 @@ export default {
             rules: {
                 userName: [
                     {required: true, message: '请选择设备！', tigger: 'blur'}
+                ],
+                operator: [
+                    {required: true, message: '请选择操作员！', tigger: 'blur'}
                 ],
                 password: [
                     {required: true, message: '密码不能为空！', tigger: 'blur'}
@@ -85,9 +88,11 @@ export default {
                         this.$message.error('当前机台未连接，请先上线')
                         return
                     }
-                    axios.get(this.httpUrl + 'GetLogin?u=' + userName + '&p=' + password)
+                    // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/GetRecord')
+                    axios.get(this.httpUrl + 'GetLogin?u=' + operator + '&p=' + password)
                     .then((res) => {
                         // console.log(res)
+                        // if(res.status === 200 && res.data.data === 'success') {
                         if(res.status === 200 && res.data === 'success') {
                             // 如果用户勾选了记住设备名则将用户名缓存
                             if(this.remember) {
@@ -96,10 +101,13 @@ export default {
                             }
                             // 权限为1，跳至开始调机的工单页面，否则跳至开始生产的工单页面
                             const currentOperator = this.operators.find(item => item.S_NAME === this.form.operator)
-                            if(currentOperator.S_AUTHOR === '1'){
-                                return this.$router.push('/work_order2')
+                            // 当前操作员权限存入缓存
+                            localStorage.setItem('author', currentOperator.S_AUTHOR)
+                            if(currentOperator.S_AUTHOR === '0'){
+                                this.$router.push('/work_order')
+                            }else{
+                                this.$router.push('/work_order2')
                             }
-                            this.$router.push('/work_order')
                         }else{
                             this.$message.error('密码错误！请重新输入')
                         }
@@ -110,13 +118,13 @@ export default {
         // 取消重置
         cancel() {
             this.$refs.form.resetFields()
-            // window.close()
         },
         // 获取设备名称
         getEquipments() {
             // 获取缓存中的设备名
             // localStorage.setItem('userName', 'machine03')
             const userName = localStorage.getItem('userName')
+            // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/GetUser')
             axios.get(this.httpUrl + 'GetUser')
             .then((res) => {
                 // console.log(res)

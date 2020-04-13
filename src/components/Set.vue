@@ -3,7 +3,7 @@
         <el-card>
             <div slot="header" class="clearfix">
                 <span>验证设置</span>
-                <el-button style="float: right; padding: 3px 0" type="text" @click="isSet=false">退出设置</el-button>
+                <el-button style="float: right; padding: 3px 0" type="text" v-show="isSet" @click="isSet=false">退出设置</el-button>
             </div>
             <div v-if="!isSet">
                 请输入密码：

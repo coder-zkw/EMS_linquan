@@ -7,11 +7,10 @@ import store from './store'
 
 Vue.use(ElementUI)
 // 声明全局 根URL
-// const baseUrl = 'http://192.168.1.120:50814/MES/'
-// const baseUrl = 'http://127.0.0.1:8080/MES/'
-Vue.prototype.httpUrl = process.env.VUE_APP_BASE_API
-Vue.prototype.killBrowserUrl = process.env.VUE_APP_BASE_KILL_API
-Vue.prototype.writeUrl = process.env.VUE_APP_BASE_WRITE_API
+const baseUrl = process.env.VUE_APP_BASE_API
+Vue.prototype.httpUrl =  baseUrl+'/imes/MES/'
+Vue.prototype.killBrowserUrl = baseUrl+ '/smes/'
+Vue.prototype.writeUrl = baseUrl+ '/smes/'
 // 定义事件总线
 // var EventBus = new Vue()
 // Object.defineProperties(Vue.prototype, {

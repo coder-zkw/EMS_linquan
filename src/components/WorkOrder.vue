@@ -16,7 +16,7 @@
           placeholder="选择日期">
         </el-date-picker>
         <el-button plain @click="refreshData">刷新</el-button>
-        <exit-btn class="btn_group"></exit-btn>
+        <exit-btn class="btn_group" :isFullscreen="isfullScreen"></exit-btn>
       </div>
     </div>
     <el-table
@@ -92,7 +92,9 @@ export default {
       // 表格高度
       tableHeight: 0,
       // 是否显示移动按钮
-      isMoveButton: true
+      isMoveButton: true,
+      isFull: false,
+      isfullScreen: false
     }
   },
   // currentdata: null,
@@ -104,18 +106,26 @@ export default {
     this.getWorkList()
   },
   mounted() {
-    // 定义表格高度
     setTimeout(() => {
-      this.tableHeight = window.innerHeight - this.$refs.tableRef.$el.offsetTop -30
-    }, 100)
-    
+        this.tableHeight = window.innerHeight - this.$refs.tableRef.$el.offsetTop - 30
+      }, 100)
+    window.onresize = () => {
+      this.$nextTick(() => {
+        this.tableHeight = window.innerHeight - this.$refs.tableRef.$el.offsetTop - 30
+
+        this.isFull = document.fullscreenElement || 
+          document.msFullscreenElement || 
+          document.mozFullScreenElement ||
+          document.webkitFullscreenElement || false
+      })
+    }
   },
   beforeUpdate(){
     // 处理表格可滚动高度刷新偶尔不一致问题，tableHeight>0,减少一些不必要的重载
     if(this.tableHeight > 0){
-      // this.$nextTick(()=>{
+      this.$nextTick(()=>{
         this.$refs.tableRef.doLayout()
-      // })
+      })
     }
   },
   updated() {
@@ -129,17 +139,11 @@ export default {
       this.isMoveButton = true
     }
   },
-  // beforeDestroy() {
-  //   // 当前条有数据时，通过事件总线传送给看板页面
-  //   if(this.currentdata != null) {
-  //     this.$EventBus.$emit("sendMsg", this.currentdata)
-  //   }
-  // },
   methods: {
     getWorkList(time, isNew) {
       const userName = localStorage.getItem('userName')
-      // axios.get(this.httpUrl + 'GetTitle?page=APS_WORKER_SIMPLE')
-      axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/getApsWorkerTitle_copy')
+      axios.get(this.httpUrl + 'GetTitle?page=APS_WORKER_SIMPLE')
+      // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/getApsWorkerTitle_copy')
       .then((res) => {
         // console.log(res)
         this.columns = res.data
@@ -149,6 +153,7 @@ export default {
       // 有选择时间用选择的时间，没有用当前时间截取出年月日
       const baseDate = time || getCurrentTime(new Date()).split(' ')[0]
       // console.log(baseDate)
+      // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/GetApsWorker?machine=' + userName + '&time=' + baseDate)
       axios.get(this.httpUrl + 'GetApsWorker?machine=' + userName + '&time=' + baseDate)
       .then((res) => {
         // console.log(res)
@@ -180,6 +185,7 @@ export default {
         // 工单号传参
         const work_Id = row.AW_PRODUCT_HALF
         const worker = row.AW_APS_WORKER
+        const isCheck = row.SW_CHECK
         // 获取缓存中设备名首字母并转为小写
         const userName = localStorage.getItem('userName')
         // 校验是否通过允许跳转
@@ -196,7 +202,7 @@ export default {
           }
         }).catch(() => this.$message.error('指令信息写入失败！请在机台手动输入。'))
         // 跳转至物料校验页面
-        this.$router.push('/materials?product=' + work_Id + '&work=' + worker)
+        this.$router.push('/materials?isCheck='+isCheck+'&product=' + work_Id + '&work=' + worker)
       }).catch(() => {
         this.$message({
           type: 'info',
@@ -247,6 +253,16 @@ export default {
       // 把当前滚动高度保存到上一次滚动高度中，留在最后比较用
       this.preHeight = height
     }
+  },
+  watch: {
+    // 监听是否全屏，val为false时，当前不是全屏，点击后显示全屏按钮为true。否则为false变为非全屏按钮
+    isFull(val) {
+      if(val === false) {
+          this.isfullScreen = false
+      }else{
+          this.isfullScreen = true
+      }
+    }
   }
 }
 </script>
@@ -288,5 +304,9 @@ export default {
   background-color: transparent;
   color: #3a8ee6;
   border: 1px solid #3a8ee6;
+}
+/deep/ .el-table__body tr.current-row>td{
+  background: #409EFF;
+  color: #fff;
 }
 </style>

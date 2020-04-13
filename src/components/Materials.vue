@@ -2,7 +2,7 @@
     <div class="materials"> 
         <el-page-header @back="goBack" content="物料校验"></el-page-header>
         <div class="exitBut">
-            <exit-btn></exit-btn>
+            <exit-btn :isFullscreen="isfullScreen"></exit-btn>
         </div>
         <el-form class="formRef" @submit.native.prevent>
             <div class="scan_code">扫码校验</div>
@@ -11,17 +11,34 @@
             </el-form-item>
         </el-form>
         <el-table
+        v-if="isCheck==='1'"
         :data="tableData"
         border
         style="width: 100%">
-        <el-table-column type="index" width="30"></el-table-column>
-        <el-table-column v-for="(item, i) in columns" :prop="item.S_NAME" :label="item.S_CHINESE" :key="i"></el-table-column>
-        <el-table-column label="校验结果">
-            <template slot-scope="scope">
-                <el-checkbox v-model="scope.row.checked" :checked="scope.row.checked"></el-checkbox>
-            </template>
-        </el-table-column>
+            <el-table-column type="index" width="30"></el-table-column>
+            <el-table-column v-for="(item, i) in columns" :prop="item.S_NAME" :label="item.S_CHINESE" :key="i"></el-table-column>
+            <el-table-column label="校验结果">
+                <template slot-scope="scope">
+                    <el-checkbox v-model="scope.row.checked" :checked="scope.row.checked"></el-checkbox>
+                </template>
+            </el-table-column>
         </el-table>
+        <div class="noCheckWrap" v-else v-show="noCheckData.length>0">
+            <el-button type="success" @click="noCheckDataSubmit">确定</el-button>
+            <el-button type="info" @click="noCheckDataEmpty">清空</el-button>
+            <el-table
+                :data="noCheckData"
+                border
+                style="width: 100%">
+                    <el-table-column type="index"></el-table-column>
+                    <el-table-column prop="scan_result" label="扫码结果"></el-table-column>
+                    <el-table-column label="操作">
+                        <template slot-scope="scope">
+                            <el-button type="danger" icon="el-icon-delete" @click="deleteScan(scope.row)"></el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+        </div>
         <!-- 验证通过 -->
         <el-dialog
         title="温馨提示"
@@ -60,32 +77,38 @@ export default {
             columns: [],
             // 每列具体内容
             tableData: [],
+            noCheckData: [],
             VerifiedDialogVisible: false,
             userName: localStorage.getItem('userName'),
             // 是否跳至看板页面
             goLayOut: false,
-            // rowData: {}
+            isFull: false,
+            isfullScreen: false,
+            isCheck: this.$route.query.isCheck
         }
     },
     created() {
         this.work_orderId = this.$route.query.product
         this.work = this.$route.query.work
-        // console.log(this.work_orderId, this.work)
-        this.getMaterialsList()
-        // this.$EventBus.$on('sendMsg', row => {
-        //     // 接收工单列表的数据进行数据,页面离开时再传给看板页面
-        //     // console.log(row)
-        //     this.rowData = row
-        // })
+        if(this.isCheck === '1'){
+            // 需要验证
+            this.getMaterialsList()
+        }
+        
     },
-    // beforeDestroy() {
-    //     // 接收来自工单列表的数据再传给看板页面
-    //     this.$EventBus.$emit("sendMsg2", this.rowData)
-    //     // 移除监听sendMsg
-    //     this.$EventBus.$off('sendMsg')
-    // },
+    mounted() {
+        window.onresize = () => {
+            this.$nextTick(() => {
+                this.isFull = document.fullscreenElement || 
+                document.msFullscreenElement || 
+                document.mozFullScreenElement ||
+                document.webkitFullscreenElement || false
+            })
+        }
+    },
     methods: {
         getMaterialsList() {
+            // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/GetTitle?page=PRD_APS_BOM')
             axios.get(this.httpUrl + 'GetTitle?page=PRD_APS_BOM')
             .then((res) => {
                 let newData = res.data
@@ -98,6 +121,7 @@ export default {
                 // console.log(this.columns)
             })
             .catch(err => err)
+            // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/GetProductHalf?wo='+ this.work_orderId)
             axios.get(this.httpUrl + 'GetProductHalf?wo='+ this.work_orderId)
             .then((res) => {
                 // console.log(res)
@@ -105,41 +129,66 @@ export default {
             })
             .catch(err => err)
         },
+        noCheckDataSubmit() {
+            this.$confirm('点击确定后，将会结束扫码验证，是否继续？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(() => {
+                 // this.VerifiedDialogVisible=true
+                this.toCheckProduct()
+                // this.checkScans()
+            })
+           
+        },
+        noCheckDataEmpty() {
+            this.$confirm('点击确定后，将会清空扫描列表，是否继续？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(() => {
+                this.noCheckData = []
+            })
+        },
         scanning() {
-            const datas = this.tableData
-            const value = this.inputVal
-            // 遍历查找列表中是否存在输入框中的值
-            let index = datas.findIndex((item) => (value.toLowerCase( ).indexOf(item.PA_METRIAL.toLowerCase( )) != -1))
-            if(index != '-1') {
-                // 若存在，把扫描结果写入扫描码处，并选中此行
-                this.$set(this.tableData[index], 'scan_result' , value)
-                this.$set(this.tableData[index], 'checked' , true)
-            }else{
-                this.$message({
-                    message: '输入码有误，请重新输入',
-                    type: 'error',
-                    duration: 1000
-                })
+            const value = this.inputVal.trim()
+            if(value === '') {
+                this.$message.error('扫描结果为空！')
+                return
             }
-            // console.log(this.tableData)
-            // 遍历列表中checkd属性是否都为true
-            let checkedNum = datas.filter(item => item.checked === true)
-            if(checkedNum.length != 0 && checkedNum.length === datas.length) {
-                // 校验成功，禁用扫码框
-                this.disabledFlag = true
-                // 判断是调机还是生产
-                if(this.$route.query.type === 'tune') {
-                    // 插入开始调机时间
-                    this.setStartTime()
+            // 不需验证只增加扫描值
+            if(this.isCheck === '0'){
+                this.noCheckData.push({scan_result: value})
+            }else{
+                // 需要验证则验证结果
+                const datas = this.tableData
+                // 遍历查找列表中是否存在输入框中的值
+                let index = datas.findIndex((item) => (value.toLowerCase( ).indexOf(item.PA_METRIAL.toLowerCase( )) != -1))
+                if(index != '-1') {
+                    // 若存在，把扫描结果写入扫描码处，并选中此行
+                    this.$set(this.tableData[index], 'scan_result' , value)
+                    this.$set(this.tableData[index], 'checked' , true)
                 }else{
-                    this.toDoDifferent()
+                    this.$message({
+                        message: value+'不属验证项，请重新扫码',
+                        type: 'error',
+                        duration: 1200
+                    })
+                }
+                // 遍历列表中checkd属性是否都为true
+                let checkedNum = datas.filter(item => item.checked === true)
+                if(checkedNum.length != 0 && checkedNum.length === datas.length) {
+                    // 校验成功，禁用扫码框
+                    this.disabledFlag = true
+                    this.toCheckProduct()    
                 }
             }
             // 输入框清空
             this.inputVal = ''
         },
-        // 校验是否为林全机台，执行不同操作
-        toDoDifferent() {
+        // 生产校验
+        toCheckProduct() {
+            // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/GetRecord?w=' + this.work+'&m=' + this.userName)
             axios.get(this.httpUrl + 'GetRecord?w=' + this.work+'&m=' + this.userName)
             .then((res) => {
                 // console.log(res)
@@ -172,6 +221,8 @@ export default {
                             this.$router.replace('/work_order')
                         })
                     }
+                    // 保存扫描结果
+                    this.checkScans()
                     this.VerifiedDialogVisible = true
                 }else {
                     // 校验失败，返回重新校验
@@ -183,8 +234,41 @@ export default {
                 this.$router.replace('/work_order')
             })
         },
+        deleteScan(row) {
+            // console.log(row)
+            const newData = this.noCheckData.filter(item => item.scan_result != row.scan_result)
+            this.noCheckData = newData
+        },
         goBack() {
             this.$router.go(-1)
+        },
+        getScans(){
+            // console.log(this.noCheckData)
+            let scans = []
+            let scansArray = null;
+            if(this.isCheck==='0'){
+                scansArray = this.noCheckData
+            }else{
+                scansArray = this.tableData
+            }
+            scansArray.map(item => scans.push(item.scan_result))
+            // alert(scans.join(','))
+            return scans.join(',')
+        },
+        checkScans() {
+            const PM_WORKER = this.work
+            const PM_PRODUCT_HALF = this.work_orderId
+            const PM_MACHINE = this.userName
+            const PM_METRIAL = this.getScans()
+            axios.post(this.httpUrl + 'Metrial', {PM_WORKER, PM_MACHINE, PM_PRODUCT_HALF, PM_METRIAL})
+            .then(res => {
+                // console.log(res)
+                if(res.data.code===200) {
+                    this.$message.success('校验成功！')
+                }else{
+                    this.$message.error('校验失败！')
+                }
+            }).catch(err => err)
         },
         browserClosed() {
             // goLayOUt为true,允许跳转看板页面,否则关闭浏览器
@@ -199,7 +283,6 @@ export default {
                 formdata.append('machineName', this.userName)
                 // 调用后台接口关闭浏览器
                 axios.post(this.killBrowserUrl + 'server/killClientBrowser', formdata)
-                // axios.get(this.killBrowserUrl + 'server/killClientBrowser?machineName='+this.userName)
                 .then(() => {
                     // 直接关闭浏览器
                 }).catch(() => {
@@ -208,31 +291,6 @@ export default {
                 // 关闭弹出框
                 this.VerifiedDialogVisible = false
             }
-        },
-        setStartTime() {
-            // let formdata = new FormData()
-            // formdata.append('MT_WORKER', this.currentRow.AW_APS_WORKER)
-            // formdata.append('MT_PRODUCT_HALF', this.currentRow.AW_PRODUCT_HALF)
-            // formdata.append('MT_MACHINE', this.userName)
-            // formdata.append('MT_DOUSER', this.operator)
-            // formdata.append('MT_STARTTIME', getCurrentTime(new Date()))
-            const MT_WORKER = this.work
-            const MT_PRODUCT_HALF = this.work_orderId
-            const MT_MACHINE = this.userName
-            const MT_DOUSER = localStorage.getItem('operator')
-            const MT_STARTTIME = getCurrentTime(new Date())
-            // 开始调机，开始时间传后台
-            axios.post(this.httpUrl + 'Tune', {MT_WORKER,MT_PRODUCT_HALF,MT_MACHINE,MT_DOUSER,MT_STARTTIME})
-            .then((res) => {
-                // console.log(res)
-                if(res.data.code === 200) {
-                    this.$message.success('调机开始时间已保存成功！')
-                    // 成功返回工单调机页面
-                    this.$router.replace('/work_order2')
-                }else{
-                    this.$message.error('开始时间写入失败，请重试！')
-                }
-            }).catch(err => err)
         }
     },
     // 自定义指令输入框自动聚焦
@@ -242,15 +300,27 @@ export default {
                 el.querySelector('input').focus()
             }
         }
+    },
+    watch: {
+        // 监听是否全屏，val为false时，当前不是全屏，点击后显示全屏按钮为true。否则为false变为非全屏按钮
+        isFull(val) {
+            if(val === false) {
+                this.isfullScreen = false
+            }else{
+                this.isfullScreen = true
+            }
+        }
     }
 }
 </script>
 <style scoped>
 .formRef{
     width: 50%;
-    height: 260px;
     margin: 0 auto;
     text-align: center;
+}
+.el-table{
+    margin-top: 20px;
 }
 .scan_code{
     margin-bottom: 20px;
@@ -270,5 +340,8 @@ export default {
 }
 /deep/ .el-alert__title{
     font-size: 24px;
+}
+.noCheckWrap{
+    text-align: right;
 }
 </style>

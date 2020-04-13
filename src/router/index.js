@@ -4,7 +4,7 @@ import Login from '../components/Login'
 import WorkOrder from '../components/WorkOrder'
 import WorkOrder2 from '../components/WorkOrder2'
 import Materials from '../components/Materials'
-// import Machine from '../components/Machine'
+import Materials1 from '../components/Materials_1'
 import Machine1 from '../components/Machine_1'
 import Tuning from '../components/Tuning'
 import Examine from '../components/Examine'
@@ -34,10 +34,10 @@ const routes = [
         path: '/materials',
         component: Materials
     },
-    // {
-    //     path: '/machine',
-    //     component: Machine
-    // },
+    {
+        path: '/materials_1',
+        component: Materials1
+    },
     {
         path: '/machine_1',
         component: Machine1

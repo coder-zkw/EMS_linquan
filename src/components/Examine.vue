@@ -2,7 +2,7 @@
     <div class="examine">
         <el-page-header @back="goBack" content="首检表单"></el-page-header>
         <div class="exitBut">
-            <exit-btn></exit-btn>
+            <exit-btn :isFullscreen="isfullScreen"></exit-btn>
         </div>
         <el-card>
             <el-form ref="form" :model="form" label-width="160px">
@@ -20,7 +20,7 @@
                     <el-col :span="12" v-for="(item,i) in checkList" :key="i" >
                         <el-form-item :label="item.title" :prop="item.attrs" 
                         :rules="[{ required: true, message: '此项不能为空'}]">
-                            <el-input :type="item.attrs === 'pe00010' ? '' : 'number'" v-model="form[item.attrs]"></el-input>
+                            <el-input :type="(item.attrs === 'pe00010' || item.attrs === 'identifier') ? '' : 'number'" v-model="form[item.attrs]"></el-input>
                         </el-form-item>
                     </el-col>
                     <el-col :span="12">
@@ -60,13 +60,26 @@ export default {
                 {title: '导体锡高：', attrs: 'conductor'},
                 {title: '绝缘锡高：', attrs: 'insulation'},
                 {title: '拉力：', attrs: 'pull'},
-                {title: '模具编号：', attrs: 'number'}
+                {title: '模具编号：', attrs: 'number'},
+                {title: '实物编号:', attrs: 'identifier'}
             ],
             form: {
                 type: '',
                 workId: this.$route.query.work,
                 product: this.$route.query.product
-            }
+            },
+            isFull: false,
+            isfullScreen: false
+        }
+    },
+    mounted() {
+        window.onresize = () => {
+            this.$nextTick(() => {
+                this.isFull = document.fullscreenElement || 
+                document.msFullscreenElement || 
+                document.mozFullScreenElement ||
+                document.webkitFullscreenElement || false
+            })
         }
     },
     methods: {
@@ -81,9 +94,10 @@ export default {
                 if(valid) {
                     axios.post(this.httpUrl +'FirstArticle', this.form)
                     .then((res) => {
-                        console.log(res)
+                        // console.log(res)
                         if(res.data.code === 200) {
                             this.$message.success('首检数据写入成功！')
+                            this.$router.replace('/work_order2')
                         }else{
                             this.$message.error('首检数据写入失败，请重试！')
                         }
@@ -91,7 +105,17 @@ export default {
                 }
             })
         }
-    }
+    },
+    watch: {
+        // 监听是否全屏，val为false时，当前不是全屏，点击后显示全屏按钮为true。否则为false变为非全屏按钮
+        isFull(val) {
+            if(val === false) {
+                this.isfullScreen = false
+            }else{
+                this.isfullScreen = true
+            }
+        }
+  }
 }
 </script>
 <style scoped>

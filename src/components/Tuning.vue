@@ -2,7 +2,7 @@
     <div class="tuning">
         <el-page-header @back="goBack" content="调机测试"></el-page-header>
         <div class="exitBut">
-            <exit-btn></exit-btn>
+            <exit-btn :isFullscreen="isfullScreen"></exit-btn>
         </div>
         <el-card>
             <el-row :gutter="12">
@@ -31,7 +31,19 @@ export default {
     data() {
         return {
             userName: localStorage.getItem('userName'),
-            operator: localStorage.getItem('operator')
+            operator: localStorage.getItem('operator'),
+            isFull: false,
+            isfullScreen: false
+        }
+    },
+    mounted() {
+        window.onresize = () => {
+            this.$nextTick(() => {
+                this.isFull = document.fullscreenElement || 
+                document.msFullscreenElement || 
+                document.mozFullScreenElement ||
+                document.webkitFullscreenElement || false
+            })
         }
     },
     methods: {
@@ -55,6 +67,16 @@ export default {
         },
         goBack() {
             this.$router.go(-1)
+        }
+    },
+    watch: {
+        // 监听是否全屏，val为false时，当前不是全屏，点击后显示全屏按钮为true。否则为false变为非全屏按钮
+        isFull(val) {
+            if(val === false) {
+                this.isfullScreen = false
+            }else{
+                this.isfullScreen = true
+            }
         }
     }
 }

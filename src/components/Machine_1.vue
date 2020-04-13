@@ -2,7 +2,7 @@
     <div class="machine1">
         <el-page-header @back="goBack" content="机台看板"></el-page-header>
         <div class="exitBut">
-            <exit-btn></exit-btn>
+            <exit-btn :isFullscreen="isfullScreen"></exit-btn>
         </div>
         <el-row :gutter="12">
             <el-col :span="12" v-for="(item,i) in titles" :key="item">
@@ -47,7 +47,9 @@ export default {
             // 计数
             count: 0,
             // 定时器
-            timer: null
+            timer: null,
+            isFull: false,
+            isfullScreen: false
         }
     },
     created() {
@@ -66,7 +68,14 @@ export default {
         // }, 5000);
     },
     mounted() {
-        
+        window.onresize = () => {
+            this.$nextTick(() => {
+                this.isFull = document.fullscreenElement || 
+                document.msFullscreenElement || 
+                document.mozFullScreenElement ||
+                document.webkitFullscreenElement || false
+            })
+        }
     },
     // beforeDestroy() {
     //     // 移除监听sendMsg2
@@ -130,6 +139,16 @@ export default {
         },
         goBack() {
             this.$router.go(-1)
+        }
+    },
+    watch: {
+        // 监听是否全屏，val为false时，当前不是全屏，点击后显示全屏按钮为true。否则为false变为非全屏按钮
+        isFull(val) {
+            if(val === false) {
+                this.isfullScreen = false
+            }else{
+                this.isfullScreen = true
+            }
         }
     }
 }
