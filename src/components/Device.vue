@@ -50,17 +50,23 @@
           }
           result = result.replace(/\n/g, '')
 
-          let res_scan = this.$store.state.res_scan
-          const isHave = res_scan.split(',').findIndex(item => item===result)
-          if(isHave != -1) {
-            this.$message.error('此条码已扫描！')
+          // 如果有name项，说明是首检页面扫码
+          const {name} = this.$route.query
+          if(name) {
+            this.$store.dispatch('handleChangeScanItems', {name, value: result})
           }else{
-            if(res_scan != '') {
-              res_scan += ','+result
+            let res_scan = this.$store.state.res_scan
+            const isHave = res_scan.split(',').findIndex(item => item===result)
+            if(isHave != -1) {
+              this.$message.error('此条码已扫描！')
             }else{
-              res_scan = result
+              if(res_scan != '') {
+                res_scan += ','+result
+              }else{
+                res_scan = result
+              }
+              this.$store.dispatch('handleChangeScans', res_scan)
             }
-            this.$store.dispatch('handleChangeScans', res_scan)
           }
 
           this.codeUrl = result
@@ -82,14 +88,20 @@
       closeScan () {
         if (!window.plus) return
         scan.close()
-        // 返回校验页面
-        this.$router.go(-1)
+        // 退出扫码返回校验页面
+        this.exitSao()
       },
       exitSao() {
-        // this.$router.go(-1)
-        this.$router.replace('/materials_1')
+        const {name} = this.$route.query
+        // console.log(this.$route.fullPath)
+        if(name) {
+          this.$router.replace('/examine')
+        }else {
+          const {isCheck, product, work} = this.$route.query
+          this.$router.replace('/materials_1?isCheck='+isCheck+'&product='+product+'&work='+work)
+        } 
       }
-    }
+    } 
   }
 </script>
 <style scoped>

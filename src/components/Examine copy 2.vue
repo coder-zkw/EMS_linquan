@@ -1,65 +1,92 @@
 <template>
     <div class="examine">
-        <el-page-header @back="goBack" content="品检表单"></el-page-header>
+        <el-page-header @back="goBack" content="首检表单"></el-page-header>
         <div class="exitBut">
             <exit-btn :isFullscreen="isfullScreen"></exit-btn>
         </div>
         <el-card>
-            <el-form ref="form" :model="form" label-width="72px">
+            <el-form ref="form" :model="form" label-width="80px">
                 <el-row :gutter="12">
-                    <el-col :span="4" >
+                    <el-col :span="8" >
                         <el-form-item label="工号：">
                             <el-input size="mini" :value="form.workId" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="4" >
+                    <el-col :span="8" >
                         <el-form-item label="计划日期：">
-                            <el-input size="mini" :value="form.datePlan" :disabled="true"></el-input>
+                            <el-date-picker
+                            v-model="form.datePlan"
+                            @change="dateValueChange"
+                            size="mini"
+                            type="date"
+                            format="yyyy/MM/dd"
+                            value-format="yyyy/MM/dd"
+                            placeholder="请选择">
+                            </el-date-picker>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="4" >
+                    <el-col :span="8" >
                         <el-form-item label="机台：">
                             <el-input size="mini" :value="form.machine" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="4" >
+                    <el-col :span="8" >
                         <el-form-item label="制令：">
-                            <el-input size="mini" :value="form.orderVal" :disabled="true"></el-input>
+                            <!-- <el-select v-model="form.orderVal" @change="orderChange" size="mini" placeholder="请选择">
+                                <el-option
+                                v-for="item in form.optionsOrder"
+                                :key="item.value"
+                                :label="item.label"
+                                :value="item.value">
+                                </el-option>
+                            </el-select> -->
+                            <el-autocomplete
+                            size="mini"
+                            class="inline-input"
+                            v-model="form.orderVal"
+                            :fetch-suggestions="querySearch"
+                            :popper-append-to-body="false"
+                            @select="handleSelect"
+                            placeholder="请选择"
+                            ></el-autocomplete>
                         </el-form-item>
+                        
                     </el-col>
-                    <el-col :span="4" >
+                    <el-col :span="8" >
                         <el-form-item label="成品编号：">
                             <el-input size="mini" :value="form.productNum" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="4" >
+                    <el-col :span="8" >
                         <el-form-item label="成品名称：">
                             <el-input size="mini" :value="form.productName" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="8" >
+                    <el-col :span="16" >
                         <el-form-item label="成品规格：">
                             <el-input size="mini" :value="form.productType" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="4" >
+                    <el-col :span="8" >
                         <el-form-item label="客户编号：">
                             <el-input size="mini" :value="form.client" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="4" >
+                    <el-col :span="8" >
                         <el-form-item label="图纸日期：">
-                            <el-input size="mini" :value="form.dateDraw" :disabled="true"></el-input>
+                            <el-date-picker
+                            v-model="form.dateDraw"
+                            size="mini"
+                            type="date"
+                            format="yyyy/MM/dd"
+                            value-format="yyyy/MM/dd"
+                            placeholder="请选择">
+                            </el-date-picker>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="4" >
+                    <el-col :span="8" >
                         <el-form-item label="图纸版次：">
                             <el-input size="mini" :value="form.versionDraw" :disabled="true"></el-input>
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="4" >
-                        <el-form-item>
-                            <el-button size="mini" type="primary">查看图纸</el-button>
                         </el-form-item>
                     </el-col>
                     <el-col :span="8" >
@@ -83,56 +110,33 @@
                             <el-input size="mini" :value="form.processDesc" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="8" class="margin-top">
-                        <el-form-item label="实物编号：" prop="identifier" :rules="{required: true, message: '实物编号不能为空'}">
-                            <el-input size="mini" v-model="form.identifier"></el-input>
-                            <el-button 
-                                class="saoma"
-                                size="mini" 
-                                circle 
-                                plain
-                                type="primary" 
-                                icon="el-icon-mobile-phone"
-                                @click="handleSaoma('identifier')">
-                            </el-button>
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="16" >
-                        <el-form-item label="备注：">
-                            <el-input type="textarea" size="mini" :rows="1" v-model="remark"></el-input>
+                    <el-col :span="8">
+                        <el-form-item>
+                            <el-button size="mini" type="success" @click="resultSubmit">品检结果提交</el-button>
                         </el-form-item>
                     </el-col>
                 </el-row>
             </el-form>
         </el-card>
         <el-table :data="tableData" ref="examineRef" size="mini" border style="width: 100%">
-            <el-table-column type="index" width="40"></el-table-column>
+            <el-table-column type="index" width="38"></el-table-column>
             <el-table-column prop="CATE_NAME" label="品检类别"></el-table-column>
             <el-table-column prop="QC_ITEM" label="品检项目"></el-table-column>
             <el-table-column prop="WL_SPEC" label="规格" :show-overflow-tooltip="true"></el-table-column>
-            <el-table-column prop="QC_REMARK" label="品检备注" width="100"></el-table-column>
-            <el-table-column prop="TOOL_NAME" label="判定工具" width="100"></el-table-column>
-            <el-table-column prop="INPUT_MODE" label="录入方式" width="100"></el-table-column>
-            <el-table-column label="标准值" width="100">
+            <el-table-column prop="QC_REMARK" label="品检备注" width="60"></el-table-column>
+            <el-table-column prop="TOOL_NAME" label="判定工具" width="60"></el-table-column>
+            <el-table-column prop="INPUT_MODE" label="录入方式" width="60"></el-table-column>
+            <el-table-column label="标准值" width="60">
                 <template slot-scope="scope">
                     {{scope.row.IS_SHOW_BZ==='0' ? '###' : scope.row.QC_VALUE}}
                 </template>
             </el-table-column>
-            <el-table-column label="检验值" width="100">
+            <el-table-column label="检验值" width="56">
                 <template slot-scope="scope">
-                    <el-select 
-                        v-if="scope.row.CHECK_MODE === 'Y/N'" 
-                        size="mini" 
-                        v-model="scope.row.INPUTVAL" 
-                        @change="getStatus(scope.row, scope.$index)"
-                        placeholder="">
-                        <el-option label="Y" value="Y"></el-option>
-                        <el-option label="N" value="N"></el-option>
-                    </el-select>
-                    <el-input v-else v-model="scope.row.INPUTVAL" size="mini" @input="getStatus(scope.row, scope.$index)"/>
+                    <el-input v-model="scope.row.INPUTVAL" size="mini" @input="getStatus(scope.row, scope.$index)"/>
                 </template>
             </el-table-column>
-            <el-table-column prop="STATUS" label="状态" width="60">
+            <el-table-column prop="STATUS" label="状态" width="42">
                 <template slot-scope="scope">
                     <el-tag size="mini" 
                         v-if="scope.row.STATUS != ''"
@@ -142,14 +146,6 @@
                 </template>
             </el-table-column>
         </el-table>
-        <div class="btnwrap">
-            品检结果：
-            <template>
-                <el-radio v-model="resExamine" label="Y" :disabled="true">通过</el-radio>
-                <el-radio v-model="resExamine" label="N" :disabled="true">不通过</el-radio>
-            </template>
-            <el-button size="mini" type="success" :disabled="isAllCheck" @click="resultSubmit">提交</el-button>
-        </div>
     </div>
 </template>
 <script>
@@ -167,9 +163,11 @@ export default {
             tableData: [],
             form: {
                 workId: localStorage.getItem('operator'),
-                datePlan: this.$route.query.date,
+                datePlan: getCurrentTime(new Date()).split(' ')[0],
                 machine: localStorage.getItem('userName'),
-                orderVal: this.$route.query.work,
+                // 制令数据
+                optionsOrder: [],
+                orderVal: '',
                 productNum: '',
                 productName: '',
                 productType: '',
@@ -183,24 +181,13 @@ export default {
                 processName: '',
                 processDesc: ''
             },
-            // 品检表单备注信息
-            remark: '',
-            // 实物编号
-            identifier: '',
-            // 品检最终是否通过结果
-            resExamine: 'N',
             isFull: false,
             isfullScreen: false,
-            timer: null,
-            isAllCheck: true
+            timer: null
         }
     },
     created() {
-        this.getProductInfo()
-    },
-    activated() {
-        // 扫码后返回页面更改可扫码框的值
-        this.changeSaoInput()
+        this.getOrderList()
     },
     mounted() {
         window.onresize = () => {
@@ -211,13 +198,38 @@ export default {
                 document.webkitFullscreenElement || false
             })
         }
-        this.changeSaoInput()
     },
     methods: {
-        getProductInfo(){
+        getOrderList(time) {
+            // 改变日期重新获取数据渲染时，清空制令数组
+            this.form.optionsOrder = []
+            const baseDate = time || this.form.datePlan
+            axios.get(' http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/GetApsWorker')
+            // axios.get(this.httpUrl + 'MES/GetApsWorker?machine=' + this.userName + '&time=' + baseDate)
+            .then((res) => {
+                // console.log(res)
+                if(res.status === 200) {
+                    const datas = res.data
+                    // 将获取的工单信息数据中所有制令单号提取出来存入数组
+                    datas.map(item => {
+                        this.form.optionsOrder.push({value: item.AW_APS_WORKER})
+                    })
+                }
+                // this.tableData = res.data
+                // this.keepData = this.tableData
+                // if(isNew === true) {
+                // this.$message({
+                //     type: 'success',
+                //     message: '数据已更新',
+                //     duration: 1000
+                // })
+                // }
+            }).catch(err => err)
+        },
+        getProductInfo(order){
             // 用工单号查询成品信息和成品工序
-            axios.get(' http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/GetProductend?wo='+this.form.orderVal)
-            // axios.get(this.httpUrl + 'MES/GetProductend?wo='+this.form.orderVal)
+            axios.get(' http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/GetProductend?wo='+order)
+            // axios.get(this.httpUrl + 'MES/GetProductend?wo='+order)
             .then(res => {
                 // console.log(res)
                 if(res.status === 200) {
@@ -256,7 +268,7 @@ export default {
             }
             this.timer = setTimeout(() => {
                 // 校验检验值是否通过
-                const {CHECK_MODE, QC_VALUE, INPUTVAL} = row
+                const {CHECK_MODE, IS_SHOW_BZ, QC_VALUE, QC_DIFF, INPUTVAL} = row
                 let value = ''
                 if(INPUTVAL != ''){
                     switch(CHECK_MODE) {
@@ -265,6 +277,8 @@ export default {
                                 value = 'OK'
                             }else if(INPUTVAL === 'N'){
                                 value = 'NG'
+                            }else{
+                                value = 'Y/N'
                             }
                             break
                         case '大于等于':
@@ -275,27 +289,16 @@ export default {
                             value = (INPUTVAL-0 >= nums[0]-0 && INPUTVAL-0 <= nums[1]-0) ? 'OK' : 'NG'
                             break
                         case '不判定':
-                            value = 'OK'
                             break
                     }
                 }
                 this.tableData[index].STATUS = value
-                this.isAllExamine()
-            }, 800)
+            }, 1000)
         },
-        isAllExamine() {
-            // console.log(this.tableData)
-            // 工序值变化后，重新获取数据并渲染
-            const allCheckflag = this.tableData.findIndex(item => item.STATUS === '')
-            if(allCheckflag === -1){
-                this.isAllCheck = false
-                // 当全部检验后判断最终结果是通过与否
-                const isOK = this.tableData.findIndex(item => item.STATUS != 'OK')
-                this.resExamine = (isOK === -1) ? 'Y': 'N'
-            }else{
-                this.isAllCheck = true
-            }
-        },
+        // orderChange(newVal) {
+        //     // 工序值变化后，重新获取数据并渲染
+        //     this.getProductInfo(newVal)
+        // },
         handleSelect(item) {
             // console.log(item)
             this.getProductInfo(item.value)
@@ -350,25 +353,16 @@ export default {
             formData.WS_IDX = this.form.processNum
             formData.GX_NAME = this.form.processName
             formData.WS_DESC = this.form.processDesc
-            formData.identifier = this.identifier
-            formData.remark = this.remark
-            formData.resExamine = this.resExamine
             formData.WS_DATA = this.tableData
             // console.log(formData)
-            this.$refs.form.validate(valid => {
-                if(valid){
-                    axios.post(this.httpUrl + 'MES/QCProductend', formData)
-                    .then(res => {
-                        if(res.status === 200){
-                            this.$message.success('保存品检结果成功！')
-                        }else {
-                            this.$message.error('保存品检结果失败！请重试')
-                        }
-                    }).catch(err => err)
-                }else{
-                    this.$message.error('有必填项未填！')
+            axios.post(this.httpUrl + 'MES/QCProductend', formData)
+            .then(res => {
+                if(res.status === 200){
+                    this.$message.success('保存品检结果成功！')
+                }else {
+                    this.$message.error('保存品检结果失败！请重试')
                 }
-            })
+            }).catch(err => err)
         },
         querySearch(queryString, cb) {
             var restaurants = this.form.optionsOrder
@@ -380,18 +374,6 @@ export default {
             return (restaurant) => {
             return (restaurant.value.toLowerCase().indexOf(queryString.toLowerCase()) != -1)
             }
-        },
-        handleSaoma(item) {
-            // console.log(item)
-            this.$router.push('/device?name='+item)
-            // this.$store.dispatch('handleChangeScanItems', {name: item, value: '123'})
-            // console.log(this.$store.state.scanItems)
-        },
-        changeSaoInput() {
-            const result = this.$store.state.scanItems
-            result.map(item => {
-                this[item.name] = item.value
-            })
         }
     },
     watch: {
@@ -407,12 +389,6 @@ export default {
 }
 </script>
 <style scoped>
-.examine{
-    padding-bottom: 40px;
-}
-.el-card{
-    padding-bottom: 10px;
-}
 /deep/ .el-form-item__label{
     font-size: 12px;
 }
@@ -422,18 +398,15 @@ export default {
 .el-date-editor{
     width: 100%;
 }
-/deep/.el-form-item__label{
-    padding-right: 2px;
-}
+/* /deep/.el-form-item__label{
+    padding: 0;
+} */
 .el-form-item{
-    margin-bottom: 2px;
+    margin-bottom: 10px;
 }
-/deep/ .el-input__inner{
-    padding: 0 6px;
-}
-.margin-top{
-    margin-top: 5px;
-}
+/* .el-table{
+    font-size: 12px;
+} */
 /deep/.el-table .cell{
     padding-left: 5px;
     padding-right: 5px;
@@ -444,32 +417,5 @@ export default {
 /deep/ .el-autocomplete-suggestion li{
     padding: 0 15px;
     font-size: 12px;
-}
-.el-select-dropdown__item{
-    padding: 0 10px;
-    font-size: 12px;
-}
-/deep/ .el-input__suffix{
-    right: -2px;
-}
-.el-radio{
-    color: #fff;
-}
-.btnwrap{
-    width: 100%;
-    height: 40px;
-    line-height: 40px;
-    text-align: center;
-    background: gray;
-    color: #fff;
-    z-index: 10;
-    position: fixed;
-    bottom: 0;
-    right: 0;
-}
-.saoma{
-    position: absolute;
-    right: -30px;
-    top: 7px;
 }
 </style>

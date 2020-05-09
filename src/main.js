@@ -8,7 +8,7 @@ import store from './store'
 Vue.use(ElementUI)
 // 声明全局 根URL
 const baseUrl = process.env.VUE_APP_BASE_API
-Vue.prototype.httpUrl =  baseUrl+'/imes/MES/'
+Vue.prototype.httpUrl =  baseUrl+'/imes/'
 Vue.prototype.killBrowserUrl = baseUrl+ '/smes/'
 Vue.prototype.writeUrl = baseUrl+ '/smes/'
 // 定义事件总线

@@ -90,6 +90,7 @@ export default {
         this.work_orderId = this.$route.query.product
         this.work = this.$route.query.work
         if(this.isCheck === '1'){
+            if(this.res_scan != '')
             // 需要验证
             this.getMaterialsList()
         }else{
@@ -111,7 +112,7 @@ export default {
     methods: {
         getMaterialsList() {
             // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/GetTitle?page=PRD_APS_BOM')
-            axios.get(this.httpUrl + 'GetTitle?page=PRD_APS_BOM')
+            axios.get(this.httpUrl + 'MES/GetTitle?page=PRD_APS_BOM')
             .then((res) => {
                 let newData = res.data
                 const newcolum = {
@@ -124,7 +125,7 @@ export default {
             })
             .catch(err => err)
             // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/GetProductHalf?wo='+ this.work_orderId)
-            axios.get(this.httpUrl + 'GetProductHalf?wo='+ this.work_orderId)
+            axios.get(this.httpUrl + 'MES/GetProductHalf?wo='+ this.work_orderId)
             .then((res) => {
                 // console.log(res)
                 this.tableData = res.data
@@ -134,8 +135,9 @@ export default {
             .catch(err => err)
         },
         getScansList() {
-            if(this.res_scan != '') {
-                const scans = this.res_scan.split(',')
+            const res_scan = this.$store.state.res_scan
+            if(res_scan != '') {
+                const scans = res_scan.split(',')
                 // 扫描结果放入不验证数据列表
                 for(let i = 0; i < scans.length; i++) {
                     this.noCheckData.push({scan_result: scans[i]})
@@ -175,7 +177,8 @@ export default {
             }
         },
         scanning() {
-            this.$router.replace('/device')
+            const {isCheck, product, work} = this.$route.query
+            this.$router.replace('/device?isCheck='+isCheck+'&product='+product+'&work='+work)
         },
         goBack() {
             this.$router.go(-1)
@@ -185,9 +188,9 @@ export default {
             let scans = this.$store.state.res_scan
             let newScans = scans.split(',').filter(item => item != row.scan_result)
             this.$store.dispatch('handleChangeScans', newScans.join(','))
-            // 清空之前扫描数据，并重新获取扫描数据渲染
+            // 清空之前扫描数据，并重新获取不需验证清空下扫描数据渲染
             this.noCheckData = []
-            this.getMaterialsList()
+            this.getScansList()
         },
         emptyScans() {
             // 清空vuex和无验证扫描列表数据
@@ -212,7 +215,7 @@ export default {
             const PM_PRODUCT_HALF = this.work_orderId
             const PM_MACHINE = this.userName
             const PM_METRIAL = this.$store.state.res_scan
-            axios.post(this.httpUrl + 'Metrial', {PM_WORKER, PM_MACHINE, PM_PRODUCT_HALF, PM_METRIAL})
+            axios.post(this.httpUrl + 'MES/Metrial', {PM_WORKER, PM_MACHINE, PM_PRODUCT_HALF, PM_METRIAL})
             .then(res => {
                 // console.log(res)
                 if(res.data.code===200) {

@@ -1,5 +1,6 @@
 <template>
     <span class="btngroup">
+        <el-button type="success" plain v-if="isShow" @click="$router.replace('/work_order')">条码验证</el-button>
         <el-button type="info" :icon="!isFullscreen ? 'el-icon-full-screen' : 'el-icon-crop'" plain @click="toggleFullscreen"></el-button>
         <el-button type="primary" plain @click="browserClosed">退出</el-button>
     </span>
@@ -10,7 +11,8 @@ import screenfull from 'screenfull'
 
 export default {
     props: {
-        isFullscreen: Boolean
+        isFullscreen: Boolean,
+        isShow: Boolean
     },
     data() {
         return {
@@ -34,9 +36,11 @@ export default {
     methods: {
         browserClosed() {
             const userName = localStorage.getItem('userName')
-            const author = localStorage.getItem('author')
-            // 若权限非生产操作员，即调机操作员，点击退出，重回登录页面
-            if(author != '0') {
+            // const author = localStorage.getItem('author')
+            const isPc = localStorage.getItem('isKeyboard')
+            // 非pc环境重回登录页面，pc环境调接口关闭浏览器
+            // if(author != '0') {
+            if(isPc != 'true') {
                 this.$router.replace('/login')
                 return
             }

@@ -15,6 +15,7 @@
           value-format="yyyy/MM/dd"
           placeholder="选择日期">
         </el-date-picker>
+        <search-input @workSearch="workSearch"></search-input>
         <el-button plain @click="refreshData">刷新</el-button>
         <exit-btn class="btn_group" :isFullscreen="isfullScreen"></exit-btn>
       </div>
@@ -66,10 +67,11 @@
 <script>
 import axios from 'axios'
 import ExitBtn from './ExitButton'
+import SearchInput from './SearchInput'
 import getCurrentTime from '../utils/currentTime'
 
 export default {
-  components: { ExitBtn },
+  components: { ExitBtn, SearchInput },
   data() {
     return {
       // 选择部分展示列
@@ -80,6 +82,7 @@ export default {
       columnsAll: [],
       // 弹出框用，某行具体内容
       detailData: [],
+      keepData: [],
       // 弹出框切换显示/隐藏
       dialogWorkVisible: false,
       // 选择日期的值
@@ -142,8 +145,8 @@ export default {
   methods: {
     getWorkList(time, isNew) {
       const userName = localStorage.getItem('userName')
-      axios.get(this.httpUrl + 'GetTitle?page=APS_WORKER_SIMPLE')
-      // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/getApsWorkerTitle_copy')
+      axios.get(this.httpUrl + 'MES/GetTitle?page=APS_WORKER_SIMPLE')
+      // axios.get(' http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/getApsWorkerTitle')
       .then((res) => {
         // console.log(res)
         this.columns = res.data
@@ -153,11 +156,12 @@ export default {
       // 有选择时间用选择的时间，没有用当前时间截取出年月日
       const baseDate = time || getCurrentTime(new Date()).split(' ')[0]
       // console.log(baseDate)
-      // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/GetApsWorker?machine=' + userName + '&time=' + baseDate)
-      axios.get(this.httpUrl + 'GetApsWorker?machine=' + userName + '&time=' + baseDate)
+      // axios.get(' http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/GetApsWorker')
+      axios.get(this.httpUrl + 'MES/GetApsWorker?machine=' + userName + '&time=' + baseDate)
       .then((res) => {
         // console.log(res)
         this.tableData = res.data
+        this.keepData = this.tableData
         if(isNew === true) {
           this.$message({
             type: 'success',
@@ -168,7 +172,7 @@ export default {
       })
       .catch(err => err)
       // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/getApsWorkerTitle')
-      axios.get(this.httpUrl + 'GetTitle?page=APS_WORKER')
+      axios.get(this.httpUrl + 'MES/GetTitle?page=APS_WORKER')
       .then((res) => {
         this.columnsAll = res.data
       })
@@ -186,21 +190,24 @@ export default {
         const work_Id = row.AW_PRODUCT_HALF
         const worker = row.AW_APS_WORKER
         const isCheck = row.SW_CHECK
-        // 获取缓存中设备名首字母并转为小写
+        // 获取缓存中设备名,是否林全设备
         const userName = localStorage.getItem('userName')
-        // 校验是否通过允许跳转
-        let formdata = new FormData()  
-        formdata.append('machineName', userName)
-        formdata.append('worker', worker)
-        // axios.get(this.writeUrl +'cmd/writeMakeInfo?machineName='+userName+'&worker='+worker)
-        axios.post(this.writeUrl +'cmd/writeMakeInfo', formdata)
-        .then((res) => {
-          // console.log(res)
-          // 写入失败，提示手动输入
-          if(res.data.code != 200) {
-            this.$message.error('指令信息写入失败！请在机台手动输入。')
-          }
-        }).catch(() => this.$message.error('指令信息写入失败！请在机台手动输入。'))
+        const company = localStorage.getItem('company')
+        if(company === 0) {
+          // 校验是否通过允许跳转
+          let formdata = new FormData()  
+          formdata.append('machineName', userName)
+          formdata.append('worker', worker)
+          // axios.get(this.writeUrl +'cmd/writeMakeInfo?machineName='+userName+'&worker='+worker)
+          axios.post(this.writeUrl +'cmd/writeMakeInfo', formdata)
+          .then((res) => {
+            // console.log(res)
+            // 写入失败，提示手动输入
+            if(res.data.code != 200) {
+              this.$message.error('制令信息写入失败！请在机台手动输入。')
+            }
+          }).catch(() => this.$message.error('制令信息写入失败！请在机台手动输入。'))
+        }
         // 跳转至物料校验页面
         this.$router.push('/materials?isCheck='+isCheck+'&product=' + work_Id + '&work=' + worker)
       }).catch(() => {
@@ -252,6 +259,11 @@ export default {
       }
       // 把当前滚动高度保存到上一次滚动高度中，留在最后比较用
       this.preHeight = height
+    },
+    workSearch(value) {
+      // 从获取的所有数据中筛选出包含搜索框内容的数据
+      const searchData = this.keepData.filter(item => (item.AW_APS_WORKER.indexOf(value) != -1))
+      this.tableData = searchData
     }
   },
   watch: {
@@ -291,6 +303,7 @@ export default {
   border-bottom: 1px solid #eee;
 }
 .el-date-editor{
+  width: 180px;
   margin-right: 10px;
 }
 .moveBit{

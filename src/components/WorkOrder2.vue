@@ -15,14 +15,16 @@
           value-format="yyyy/MM/dd"
           placeholder="选择日期">
         </el-date-picker>
+        <search-input @workSearch="workSearch"></search-input>
         <el-button plain @click="refreshData">刷新</el-button>
         <exit-btn class="btn_group"  :isFullscreen="isfullScreen"></exit-btn>
       </div>
     </div>
     <div class="btnwrap">
       <el-button type="info" @click="detailWorkOrder(currentRow)">查看详情</el-button>
-      <el-button type="primary" :disabled="isTuneStart" v-if="isShowTune" @click="tuningStart">开始调机</el-button>
-      <el-button type="success" :disabled="isTuneEnd" v-if="isShowTune" @click="tuningEnd">结束调机</el-button>
+      <el-button type="success" :disabled="isTuneStart" v-if="isShowTune" @click="tuningCheck">开始调机</el-button>
+      <el-button type="primary" :disabled="isMaterial" v-if="isShowTune" @click="verification(currentRow)">条码验证</el-button>
+      <el-button type="danger" :disabled="isTuneEnd" v-if="isShowTune" @click="tuningEnd">结束调机</el-button>
       <el-button type="warning" v-if="isShowExamine" @click="toExamine">首/末/巡检</el-button>
     </div>
     <!-- 工单列表 -->
@@ -69,16 +71,18 @@
 <script>
 import axios from 'axios'
 import ExitBtn from './ExitButton'
+import SearchInput from './SearchInput'
 import getCurrentTime from '../utils/currentTime'
 
 export default {
-  components: { ExitBtn },
+  components: { ExitBtn, SearchInput },
   data() {
     return {
       // 选择部分展示列
       columns: [],
       // 所有行数据全部展示
       tableData: [],
+      keepData: [],
       // 弹出框用，全部列
       columnsAll: [],
       // 弹出框用，某行具体内容
@@ -86,7 +90,7 @@ export default {
       // 弹出框切换显示/隐藏
       dialogWorkVisible: false,
       // 选择日期的值
-      valueDate: '',
+      valueDate: getCurrentTime(new Date()).split(' ')[0],
       // 上移，下移按钮是否禁用
       moveTop: true,
       moveBottom: false,
@@ -98,12 +102,16 @@ export default {
       isMoveButton: true,
       // 当前行信息
       currentRow: null,
+      // 查找工单的值
+      workVal: '',
       userName: localStorage.getItem('userName'),
+      company: localStorage.getItem('company'),
       operator: localStorage.getItem('operator'),
       isFull: false,
       isfullScreen: false,
       // 开始、结束调机禁用切换
       isTuneStart: true,
+      isMaterial: true,
       isTuneEnd: true,
       // 按钮显示隐藏切换
       isShowTune: localStorage.getItem('author') === '1' ? true : false,
@@ -112,9 +120,6 @@ export default {
   },
   // currentdata: null,
   created() {
-    // const screenHeight = window.screen.height
-    // const screenHeight = window.screen.availHeight
-  
     // 获取工单列表
     this.getWorkList()
   },
@@ -156,17 +161,18 @@ export default {
   },
   methods: {
     getWorkList(time, isNew) {
-      // axios.get(this.httpUrl + 'GetTitle?page=APS_WORKER_SIMPLE')
-      axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/getApsWorkerTitle_copy')
+      axios.get(this.httpUrl + 'MES/GetTitle?page=APS_WORKER_SIMPLE')
+      // axios.get(' http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/getApsWorkerTitle')
       .then((res) => {
         this.columns = res.data
       })
       .catch(err => err)
-      const baseDate = time || getCurrentTime(new Date()).split(' ')[0]
-      axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/GetApsWorker?machine=' + this.userName + '&time=' + baseDate)
-      // axios.get(this.httpUrl + 'GetApsWorker?machine=' + this.userName + '&time=' + baseDate)
+      const baseDate = time || this.valueDate
+      // axios.get(' http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/GetApsWorker')
+      axios.get(this.httpUrl + 'MES/GetApsWorker?machine=' + this.userName + '&time=' + baseDate)
       .then((res) => {
         this.tableData = res.data
+        this.keepData = this.tableData
         if(isNew === true) {
           this.$message({
             type: 'success',
@@ -176,8 +182,8 @@ export default {
         }
       })
       .catch(err => err)
-      axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/getApsWorkerTitle')
-      // axios.get(this.httpUrl + 'GetTitle?page=APS_WORKER')
+      // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/getApsWorkerTitle')
+      axios.get(this.httpUrl + 'MES/GetTitle?page=APS_WORKER')
       .then((res) => {
         this.columnsAll = res.data
       })
@@ -233,20 +239,57 @@ export default {
       // 传0验证当前工单是否已开始调机
       this.setStartTime(0)
     },
+    // 验证机台是否运行中，未运行才可开始调机
+    tuningCheck() {
+      // 非林全机台直接开始调机
+      if(this.company === 1) {
+          return this.tuningStart()
+      }
+      this.tuningStart()
+      // 林全机台需查看设备是否在运行中，需停机才可开始调机
+      // axios.get(this.writeUrl+'cmd/getMachineStatusRs?machineName='+this.userName)
+      // axios.get(this.writeUrl+'cmd/getMachineStatusRs', {params: {machineName: this.userName}})
+      // let formdata = new FormData()
+      // formdata.append('machineName', this.userName)
+      // axios.post(this.writeUrl+'cmd/getMachineStatusRs', formdata)
+      // .then(res => {
+      //   // console.log(res)
+      //   const data = res.data
+      //   if(data.code === 200) {
+      //     if(data.content === 'Stop') {
+      //       // 机台停止状态，则开始调机
+      //       this.tuningStart()
+      //     }else{
+      //       this.$message.error('设备运行中，调机需停止运行！')
+      //     }
+      //   }else if(data.code === 500) {
+      //     this.$message.warning('获取状态超时，请重试！')
+      //   }else{
+      //     this.$message.error('获取状态失败，请重试！')
+      //   }
+      // }).catch(() => {
+      //   this.$message.error('获取状态请求错误！')
+      // })
+    },
     tuningStart() {
       // 写入开始调机时间
       this.setStartTime()
-      // 跳至物料验证页面
-      this.$router.push('/materials_1?isCheck='+this.currentRow.SW_CHECK+'&work='+this.currentRow.AW_APS_WORKER+'&product='+this.currentRow.AW_PRODUCT_HALF)
+      this.$confirm('已开始调机，是否立即进行条码验证？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        this.toMaterials()
+      }).catch(err => err)
     },
-    tuningEnd() {
-      const MT_WORKER = this.currentRow.AW_APS_WORKER
-      const MT_PRODUCT_HALF = this.currentRow.AW_PRODUCT_HALF
-      const MT_MACHINE = this.userName
+    tuningEnd(e, work, machine, product) {
+      const MT_WORKER = work || this.currentRow.AW_APS_WORKER
+      const MT_PRODUCT_HALF = product || this.currentRow.AW_PRODUCT_HALF
+      const MT_MACHINE = machine || this.userName
       const MT_DOUSER = this.operator
       const MT_ENDTIME = getCurrentTime(new Date())
-      // 开始调机，开始时间传后台
-      axios.post(this.httpUrl + 'Tune', {MT_WORKER,MT_PRODUCT_HALF,MT_MACHINE,MT_DOUSER,MT_ENDTIME})
+      // 结束调机，结束时间传后台
+      axios.post(this.httpUrl + 'MES/Tune', {MT_WORKER,MT_PRODUCT_HALF,MT_MACHINE,MT_DOUSER,MT_ENDTIME})
       .then((res) => {
           // console.log(res)
           if(res.data.code === 200) {
@@ -258,6 +301,19 @@ export default {
             this.$message.error('结束时间写入失败，请重试！')
           }
       }).catch(err => err)
+      // 结束调机，发送请求通知上位机切换操作员权限
+      let formdata = new FormData()
+      formdata.append('machineName', this.userName)
+      axios.post(this.writeUrl+'cmd/changeUser', formdata)
+      .then(res => {
+        if(res.data.code === 200) {
+          this.$message.success('上位机切换操作员权限成功！')
+        }else{
+          this.$message.error('上位机切换操作权限失败！请手动切换')
+        }
+      }).catch(() => {
+        this.$message.error('上位机自动切换操作权限失败！请手动切换')
+      })
     },
     setStartTime(time) {
         const MT_WORKER = this.currentRow.AW_APS_WORKER
@@ -266,30 +322,36 @@ export default {
         const MT_DOUSER = this.operator
         const MT_STARTTIME = (time === 0 ? '' : getCurrentTime(new Date()))
         // 开始调机，开始时间传后台
-        axios.post(this.httpUrl + 'Tune', {MT_WORKER,MT_PRODUCT_HALF,MT_MACHINE,MT_DOUSER,MT_STARTTIME})
+        axios.post(this.httpUrl + 'MES/Tune', {MT_WORKER,MT_PRODUCT_HALF,MT_MACHINE,MT_DOUSER,MT_STARTTIME})
         .then((res) => {
             // console.log(res)
             if(res.data.code === 200) {
-              // time为空时，才验证是否在调机中
+              // time为0时，才验证是否在调机中
               if(time === 0) {
+                // 正在调机的设备
+                const machines = res.data.data
                 // 返回数组为空，说明没有正在调机的工单，开始调机开
-                if(res.data.data.length === 0) {
+                if(machines.length === 0) {
                   this.isTuneStart = false
+                  this.isMaterial = false
                   this.isTuneEnd = true
                 }else {
-                  const work = res.data.data[0].MT_WORKER
-                  const user = res.data.data[0].MT_DOUSER
+                  const work = machines[0].MT_WORKER
+                  const machine = machines[0].MT_MACHINE
+                  const product = machines[0].MT_PRODUCT_HALF
                   if(work === this.currentRow.AW_APS_WORKER) {
-                    // 结束调机按钮开
+                    // 条码验证、结束调机按钮开
                     this.isTuneStart = true
+                    this.isMaterial = false
                     this.isTuneEnd = false
                   }else{
                     // 提示有未结束的调机工单
-                    this.$message({
-                      type: 'error',
-                      message: user+' 有未结束调机的工单：'+ work,
-                      duration: 1500
-                    })
+                    this.isTuneOver(work, machine, product)
+                    // this.$message({
+                    //   type: 'error',
+                    //   message: machine+' 有未结束调机的工单：'+ work,
+                    //   duration: 1500
+                    // })
                     this.isTuneEnd = true
                   }
                 }
@@ -304,20 +366,92 @@ export default {
             }
         }).catch(err => err)
     },
+    // 确定是否立即结束未结束的调机工单
+    isTuneOver(work, machine, product) {
+      this.$confirm(machine+'有未结束调机的工单：'+work+',是否结束？', '提示', {
+        confirmButtonText: '是',
+        cancelButtonText: '否',
+        type: 'warning'
+      }).then(() => {
+        this.tuningEnd( null,work, machine, product)
+      }).catch(err => err)
+    },
+    // 条码验证
+    verification(row) {
+      this.$confirm('点击确定后，将会向机台写入制令信息，是否继续？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        // 工单号传参
+        const work_Id = row.AW_PRODUCT_HALF
+        const worker = row.AW_APS_WORKER
+        // const isCheck = row.SW_CHECK
+        // 获取缓存中设备名首字母并转为小写
+        const userName = localStorage.getItem('userName')
+        // 林全机台，则写入制令信息，否则不用写
+        if(this.company === '0'){
+          // 校验是否通过允许跳转
+          let formdata = new FormData()  
+          formdata.append('machineName', userName)
+          formdata.append('worker', worker)
+          // axios.get(this.writeUrl +'cmd/writeMakeInfo?machineName='+userName+'&worker='+worker)
+          axios.post(this.writeUrl +'cmd/writeMakeInfo', formdata)
+          .then((res) => {
+            // console.log(res)
+            // 写入失败，提示手动输入
+            if(res.data.code != 200) {
+              this.$message.error('制令信息写入失败！请在机台手动输入。')
+            }
+          }).catch(() => this.$message.error('制令信息写入失败！请在机台手动输入。'))
+        }
+        // 无论是否写制令信息，都跳转物料验证页面
+        this.toMaterials()
+      }).catch(() => {
+        this.$message({
+          type: 'info',
+          message: '已取消验证'
+        })       
+      })
+    },
+    toMaterials() {
+      const {AW_CLASS, AW_APS_WORKER, AW_PRODUCT_HALF, SW_CHECK} = this.currentRow
+      if(AW_CLASS === 'APS') {
+        axios.get(this.httpUrl + 'MES/GetProductHalf?wo='+ AW_PRODUCT_HALF)
+        .then((res) => {
+            // console.log(res.data)
+            let isCheck = '0';
+            if(res.data.length > 0){
+              isCheck = '1'
+            }
+            this.$router.push('/materials_1?isCheck='+isCheck+'&work='+AW_APS_WORKER+'&product='+AW_PRODUCT_HALF)
+        }).catch(err => err)
+      }else{
+        // 跳至物料验证页面
+        this.$router.push('/materials_1?isCheck='+SW_CHECK+'&work='+AW_APS_WORKER+'&product='+AW_PRODUCT_HALF)
+      }
+    },
     toExamine() {
       if(this.currentRow === null) {
         return this.$message.error('请先选择制令单号！')
       }
-      this.$router.push('/examine?work='+this.currentRow.AW_APS_WORKER+'&product='+this.currentRow.AW_PRODUCT_HALF)
+      const {AW_APS_WORKER, AW_PRODUCT_HALF, AW_PLAN_DATE} = this.currentRow
+      this.$router.push('/examine?work='+AW_APS_WORKER+'&product='+AW_PRODUCT_HALF+'&date='+AW_PLAN_DATE)
+      // this.$router.push('/examine')
+    },
+    workSearch(value) {
+      // 从获取的所有数据中筛选出包含搜索框内容的数据
+      const searchData = this.keepData.filter(item => (item.AW_APS_WORKER.indexOf(value) != -1))
+      this.tableData = searchData
     }
   },
   watch: {
     // 监听是否全屏，val为false时，当前不是全屏，点击后显示全屏按钮为true。否则为false变为非全屏按钮
     isFull(val) {
       if(val === false) {
-          this.isfullScreen = false
+        this.isfullScreen = false
       }else{
-          this.isfullScreen = true
+        this.isfullScreen = true
       }
     }
   }
@@ -352,6 +486,7 @@ export default {
   border-bottom: 1px solid #eee;
 }
 .el-date-editor{
+  width: 180px;
   margin-right: 10px;
 }
 .moveBit{

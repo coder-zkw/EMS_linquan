@@ -2,16 +2,45 @@
     <div class="machine1">
         <el-page-header @back="goBack" content="机台看板"></el-page-header>
         <div class="exitBut">
-            <exit-btn :isFullscreen="isfullScreen"></exit-btn>
+            <exit-btn :isFullscreen="isfullScreen" :isShow="true"></exit-btn>
         </div>
         <el-row :gutter="12">
             <el-col :span="12" v-for="(item,i) in titles" :key="item">
                 <el-card class="bottom_width" shadow="always">
-                    <span class="machine_title">{{item}}：</span>
-                    <el-tag :type="i === 7 ? '': 'success'" :class="i === 7 ? 'count': ''" v-if="result[i] != null">{{i === 7 ? count : result[i]}}</el-tag>
+                    <span class="machine_title">
+                        {{item}}
+                        <el-button type="info" size="mini" plain v-if="i===7" @click="setdialogVisible = true">x {{selectVal}}</el-button>：
+                    </span>
+                    <el-tag 
+                        :type="i === 7 ? '': 'success'" 
+                        :class="i === 7 ? 'count': ''" 
+                        v-if="result[i] != null">
+                        {{i === 7 ? count*selectVal : result[i]}}
+                    </el-tag>
                 </el-card>
             </el-col>
         </el-row>
+        <el-dialog
+        title="系数设置"
+        :visible.sync="setdialogVisible"
+        width="50%">
+        <el-form label-width="100px">
+            <el-form-item label="请选择系数：">
+                <el-select v-model="selectVal">
+                    <el-option
+                    v-for="item in 5"
+                    :key="item.value"
+                    :label="item"
+                    :value="item">
+                    </el-option>
+                </el-select>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button @click="setdialogVisible = false">取 消</el-button>
+            <el-button type="primary" @click="handleClick">确 定</el-button>
+        </span>
+        </el-dialog>
         <!-- <el-table
             :data="tableData"
             border
@@ -30,6 +59,7 @@
 // import axios from 'axios'
 import ExitBtn from './ExitButton'
 import getCurrentTime from '../utils/currentTime'
+import axios from 'axios'
 
 export default {
     components: { ExitBtn },
@@ -44,28 +74,19 @@ export default {
             result: [],
             rowData: this.$store.state.currentOrderData,
             status: '离线',
+            setdialogVisible: false,
+            selectVal: '1',
             // 计数
             count: 0,
-            // 定时器
-            timer: null,
             isFull: false,
             isfullScreen: false
         }
     },
     created() {
-        // this.work_orderId = this.$route.query.work
-        // this.machine_name = localStorage.getItem('userName')
-        // console.log(this.work_orderId, this.machine_name)
-        // this.$EventBus.$on('sendMsg2', row => {
-        //     // 接收工单列表传给校验页面的数据进行数据展示
-        //     this.rowData = row
-        // })
         this.getMachineList()
+        // 获取当前计数系数
+        this.getCoefficient()
         this.getCount()
-        // 开启定时器，每5秒获取一次计数数据
-        // this.timer = setInterval(() => {
-        //     this.getCount()
-        // }, 5000);
     },
     mounted() {
         window.onresize = () => {
@@ -77,60 +98,73 @@ export default {
             })
         }
     },
-    // beforeDestroy() {
-    //     // 移除监听sendMsg2
-    //     this.$EventBus.$off('sendMsg2')
-    //     // 移除定时器
-    //     clearInterval(this.timer)
-    // },
     methods: {
+        getCoefficient() {
+            axios.get(this.httpUrl + 'MES/GetCoefficient?wo='+this.rowData.AW_APS_WORKER)
+            .then(res => {
+                // console.log(res)
+                if(res.status === 200){
+                    const data = res.data[0]
+                    this.selectVal = data.MB_COEFFICIENT
+                    this.count = data.PW_TOTAL
+                }
+            }).catch(err=>err)
+        },
         getCount() {
-            // 调用接口获取实时计数
-            // let formdata = new FormData()
-            // formdata.append('PW_MACHINE', this.userName)
-            // formdata.append('PW_WORKER', this.work_orderId)
-            // const formdata = {
-            //     'PW_MACHINE': this.userName,
-            //     'PW_WORKER': this.work_orderId
-            // }
-            // 获取最新计数量接口
-            // axios.post(this.httpUrl + 'WorkerAmount', formdata)
-            // .then((res) => {
-            //     // console.log(res)
-            //     if(res.data.code === 200){
-            //         // 保存设备、工单成功，允许跳转至看板页面
-            //         this.count = res.data.value
-            //     }else{
-            //         this.$message.error('获取计数失败！请重新尝试')
-            //     }
-            // }).catch(err => err)
-            // const formdata = '{cmd: "count",worker: "'+this.work_orderId+'"}'
-            // console.log(this.killBrowserUrl.replace('http', 'ws'))
-            let websocket = new WebSocket(this.killBrowserUrl.replace('http', 'ws') +'ws/'+this.userName)
-            // console.log(formdata)
+            // this.killBrowserUrl.replace('http', 'ws') +'ws/'+this.userName
+            let websocket = new WebSocket('ws://192.168.13.12:10003/ws/'+this.userName)
             websocket.onopen = () => {
                 // websocket.send(formdata)
                 if(websocket.readyState === 1){
-                    this.status = '在线'
+                    // this.status = '在线'
                     // 挂载获取的数据
-                    this.getMachineList()
+                    // this.getMachineList()
                 }
             }
             websocket.onerror = () => {
                 this.$message.error('websocket错误');
             }
             websocket.onmessage = (evt) => {
+                this.status = '在线'
                 // console.log(evt)
                 const result = JSON.parse(evt.data)
-                if(result.cmd === 'getUiCount' && result.worker === this.rowData.AW_WORKER){
+                // 收到后台getUiCount制令，更新当前计数
+                if(result.cmd === 'getUiCount' && result.worker === this.rowData.AW_APS_WORKER){
                     this.count = result.count
+                }else if(result.cmd === 'getUiForbidRun') {
+                    this.$confirm('因条码验证未通过或失效，设备拒绝启动，是否前往条码验证页面？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        this.$router.replace('/work_order')
+                    }).catch(err => err)
                 }
             }
+        },
+        handleClick() {
+            // 改变系数值后，发送到后台保存
+            this.changeValue()
+            this.setdialogVisible = false
+            // 从新获取系数
+            // this.getCoefficient()
+        },
+        changeValue() {
+            axios.post(this.httpUrl+'MES/UpCoefficient',{MB_COEFFICIENT: this.selectVal, MB_WORKER: this.rowData.AW_APS_WORKER})
+            .then(res => {
+                // console.log(res)
+                if(res.data.code === 200){
+                    // 保存成功后，从新获取系数渲染
+                    this.getCoefficient()
+                }else{
+                    this.$message.error('计数系数修改失败')
+                }
+            }).catch(err => err)
         },
         getMachineList() {
             this.result.push(this.userName) //获取缓存的设备名
             this.result.push(this.status) //连接机台状态
-            this.result.push(this.rowData.AW_WORKER)
+            this.result.push(this.rowData.AW_APS_WORKER)
             this.result.push(this.rowData.AW_PRODUCT_HALF)
             this.result.push(this.rowData.AW_PLAN_DATETIME)
             this.result.push(getCurrentTime()) //实际开始时间，获取当前时间

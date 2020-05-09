@@ -7,7 +7,7 @@
         <el-form class="formRef" @submit.native.prevent>
             <div class="scan_code">扫码校验</div>
             <el-form-item>
-                <el-input v-model="inputVal" v-focus :disabled="disabledFlag" @keyup.enter.native="scanning()"></el-input>
+                <el-input v-model="inputVal" v-focus ref="inputRef" :disabled="disabledFlag" @keyup.enter.native="scanning()"></el-input>
             </el-form-item>
         </el-form>
         <el-table
@@ -109,7 +109,7 @@ export default {
     methods: {
         getMaterialsList() {
             // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/GetTitle?page=PRD_APS_BOM')
-            axios.get(this.httpUrl + 'GetTitle?page=PRD_APS_BOM')
+            axios.get(this.httpUrl + 'MES/GetTitle?page=PRD_APS_BOM')
             .then((res) => {
                 let newData = res.data
                 const newcolum = {
@@ -122,7 +122,7 @@ export default {
             })
             .catch(err => err)
             // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/GetProductHalf?wo='+ this.work_orderId)
-            axios.get(this.httpUrl + 'GetProductHalf?wo='+ this.work_orderId)
+            axios.get(this.httpUrl + 'MES/GetProductHalf?wo='+ this.work_orderId)
             .then((res) => {
                 // console.log(res)
                 this.tableData = res.data
@@ -148,6 +148,7 @@ export default {
                 type: 'warning'
             }).then(() => {
                 this.noCheckData = []
+                this.scanFocus()
             })
         },
         scanning() {
@@ -189,24 +190,26 @@ export default {
         // 生产校验
         toCheckProduct() {
             // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/GetRecord?w=' + this.work+'&m=' + this.userName)
-            axios.get(this.httpUrl + 'GetRecord?w=' + this.work+'&m=' + this.userName)
+            axios.get(this.httpUrl + 'MES/GetRecord?w=' + this.work+'&m=' + this.userName)
             .then((res) => {
                 // console.log(res)
                 // 校验成功，跳转页面
                 if(res.data === 'success' || res.data.data === 'success') {
                 // if(res.data.data === 'success') {
-                    const firstChars = this.userName.substr(0, 3).toLowerCase()
-                    if(firstChars != 'jdd' && firstChars != 'jsd') {
+                    // const firstChars = this.userName.substr(0, 3).toLowerCase()
+                    const company = localStorage.getItem('company')
+                    // if(firstChars != 'jdd' && firstChars != 'jsd') {
+                        if(company === '1') {
                         // 调用接口，后台写数据
                         // let formdata = new FormData()
                         // formdata.append('PW_MACHINE', this.userName)
                         // formdata.append('PW_WORKER', this.work_orderId)
                         const formdata = {
                             'PW_MACHINE': this.userName,
-                            'PW_WORKER': this.work_orderId
+                            'PW_WORKER': this.work
                         }
                         // 保存设备名和工单号接口
-                        axios.post(this.httpUrl + 'StartRecord', formdata)
+                        axios.post(this.httpUrl + 'MES/StartRecord', formdata)
                         .then((res) => {
                             // console.log(res)
                             if(res.data.code === 200){
@@ -238,9 +241,14 @@ export default {
             // console.log(row)
             const newData = this.noCheckData.filter(item => item.scan_result != row.scan_result)
             this.noCheckData = newData
+            // 扫码框获取焦点
+            this.scanFocus()
         },
         goBack() {
             this.$router.go(-1)
+        },
+        scanFocus() {
+            this.$refs.inputRef.focus()
         },
         getScans(){
             // console.log(this.noCheckData)
@@ -260,24 +268,26 @@ export default {
             const PM_PRODUCT_HALF = this.work_orderId
             const PM_MACHINE = this.userName
             const PM_METRIAL = this.getScans()
-            axios.post(this.httpUrl + 'Metrial', {PM_WORKER, PM_MACHINE, PM_PRODUCT_HALF, PM_METRIAL})
+            axios.post(this.httpUrl + 'MES/Metrial', {PM_WORKER, PM_MACHINE, PM_PRODUCT_HALF, PM_METRIAL})
             .then(res => {
                 // console.log(res)
                 if(res.data.code===200) {
-                    this.$message.success('校验成功！')
+                    this.$message.success('扫码结果保存成功！')
                 }else{
-                    this.$message.error('校验失败！')
+                    this.$message.error('扫码结果保存失败！')
                 }
             }).catch(err => err)
         },
         browserClosed() {
+            // 关闭弹出框
+            this.VerifiedDialogVisible = false
             // goLayOUt为true,允许跳转看板页面,否则关闭浏览器
             if(this.goLayOut) {
                 this.$message.success('校验成功，页面即将跳至看板页面！')
                 // 延迟3秒跳转至看板页面
                 setTimeout(() => {
                     this.$router.push('/machine_1?work=' + this.work)
-                }, 3000)
+                }, 2000)
             }else{
                 let formdata = new FormData()
                 formdata.append('machineName', this.userName)
@@ -288,8 +298,7 @@ export default {
                 }).catch(() => {
                     this.$message.error('浏览器自动关闭失败，请手动关闭！')
                 })
-                // 关闭弹出框
-                this.VerifiedDialogVisible = false
+                
             }
         }
     },

@@ -10,6 +10,8 @@ import Tuning from '../components/Tuning'
 import Examine from '../components/Examine'
 import Setting from '../components/Set'
 import Device from '../components/Device'
+import Audit from '../components/Audit'
+
 
 Vue.use(VueRouter)
 
@@ -48,7 +50,8 @@ const routes = [
     },
     {
         path: '/examine',
-        component: Examine
+        component: Examine,
+        meta: { requireAuth: true, keepAlive: true}
     },
     {
         path: '/set',
@@ -57,6 +60,10 @@ const routes = [
     {
         path: '/device',
         component: Device
+    },
+    {
+        path: '/audit',
+        component: Audit
     }
 ]
 

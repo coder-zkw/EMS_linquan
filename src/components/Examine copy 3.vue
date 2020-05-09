@@ -5,64 +5,64 @@
             <exit-btn :isFullscreen="isfullScreen"></exit-btn>
         </div>
         <el-card>
-            <el-form ref="form" :model="form" label-width="72px">
+            <el-form ref="form" :model="form" label-width="70px">
                 <el-row :gutter="12">
-                    <el-col :span="4" >
+                    <el-col :span="6" >
                         <el-form-item label="工号：">
                             <el-input size="mini" :value="form.workId" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="4" >
+                    <el-col :span="6" >
                         <el-form-item label="计划日期：">
                             <el-input size="mini" :value="form.datePlan" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="4" >
+                    <el-col :span="6" >
                         <el-form-item label="机台：">
                             <el-input size="mini" :value="form.machine" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="4" >
+                    <el-col :span="6" >
                         <el-form-item label="制令：">
                             <el-input size="mini" :value="form.orderVal" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="4" >
+                    <el-col :span="6" >
                         <el-form-item label="成品编号：">
                             <el-input size="mini" :value="form.productNum" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="4" >
+                    <el-col :span="6" >
                         <el-form-item label="成品名称：">
                             <el-input size="mini" :value="form.productName" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="8" >
+                    <el-col :span="12" >
                         <el-form-item label="成品规格：">
                             <el-input size="mini" :value="form.productType" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="4" >
+                    <el-col :span="6" >
                         <el-form-item label="客户编号：">
                             <el-input size="mini" :value="form.client" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="4" >
+                    <el-col :span="6" >
                         <el-form-item label="图纸日期：">
                             <el-input size="mini" :value="form.dateDraw" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="4" >
+                    <el-col :span="6" >
                         <el-form-item label="图纸版次：">
                             <el-input size="mini" :value="form.versionDraw" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="4" >
+                    <el-col :span="6" >
                         <el-form-item>
                             <el-button size="mini" type="primary">查看图纸</el-button>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="8" >
+                    <el-col :span="6" >
                         <el-form-item label="工序序号：">
                             <el-select v-model="form.processNum" @change="processChange" size="mini" placeholder="请选择">
                                 <el-option
@@ -73,31 +73,22 @@
                             </el-select>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="8" >
+                    <el-col :span="6" >
                         <el-form-item label="工序名称：">
                             <el-input size="mini" :value="form.processName" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="8" >
+                    <el-col :span="12" >
                         <el-form-item label="工序描述：">
                             <el-input size="mini" :value="form.processDesc" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="8" class="margin-top">
-                        <el-form-item label="实物编号：" prop="identifier" :rules="{required: true, message: '实物编号不能为空'}">
-                            <el-input size="mini" v-model="form.identifier"></el-input>
-                            <el-button 
-                                class="saoma"
-                                size="mini" 
-                                circle 
-                                plain
-                                type="primary" 
-                                icon="el-icon-mobile-phone"
-                                @click="handleSaoma('identifier')">
-                            </el-button>
+                    <el-col :span="6" class="margin-top">
+                        <el-form-item label="实物编号：">
+                            <el-input size="mini" v-model="identifier"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="16" >
+                    <el-col :span="18" >
                         <el-form-item label="备注：">
                             <el-input type="textarea" size="mini" :rows="1" v-model="remark"></el-input>
                         </el-form-item>
@@ -198,10 +189,6 @@ export default {
     created() {
         this.getProductInfo()
     },
-    activated() {
-        // 扫码后返回页面更改可扫码框的值
-        this.changeSaoInput()
-    },
     mounted() {
         window.onresize = () => {
             this.$nextTick(() => {
@@ -211,7 +198,6 @@ export default {
                 document.webkitFullscreenElement || false
             })
         }
-        this.changeSaoInput()
     },
     methods: {
         getProductInfo(){
@@ -256,7 +242,7 @@ export default {
             }
             this.timer = setTimeout(() => {
                 // 校验检验值是否通过
-                const {CHECK_MODE, QC_VALUE, INPUTVAL} = row
+                const {CHECK_MODE, IS_SHOW_BZ, QC_VALUE, QC_DIFF, INPUTVAL} = row
                 let value = ''
                 if(INPUTVAL != ''){
                     switch(CHECK_MODE) {
@@ -355,20 +341,14 @@ export default {
             formData.resExamine = this.resExamine
             formData.WS_DATA = this.tableData
             // console.log(formData)
-            this.$refs.form.validate(valid => {
-                if(valid){
-                    axios.post(this.httpUrl + 'MES/QCProductend', formData)
-                    .then(res => {
-                        if(res.status === 200){
-                            this.$message.success('保存品检结果成功！')
-                        }else {
-                            this.$message.error('保存品检结果失败！请重试')
-                        }
-                    }).catch(err => err)
-                }else{
-                    this.$message.error('有必填项未填！')
+            axios.post(this.httpUrl + 'MES/QCProductend', formData)
+            .then(res => {
+                if(res.status === 200){
+                    this.$message.success('保存品检结果成功！')
+                }else {
+                    this.$message.error('保存品检结果失败！请重试')
                 }
-            })
+            }).catch(err => err)
         },
         querySearch(queryString, cb) {
             var restaurants = this.form.optionsOrder
@@ -380,18 +360,6 @@ export default {
             return (restaurant) => {
             return (restaurant.value.toLowerCase().indexOf(queryString.toLowerCase()) != -1)
             }
-        },
-        handleSaoma(item) {
-            // console.log(item)
-            this.$router.push('/device?name='+item)
-            // this.$store.dispatch('handleChangeScanItems', {name: item, value: '123'})
-            // console.log(this.$store.state.scanItems)
-        },
-        changeSaoInput() {
-            const result = this.$store.state.scanItems
-            result.map(item => {
-                this[item.name] = item.value
-            })
         }
     },
     watch: {
@@ -409,9 +377,6 @@ export default {
 <style scoped>
 .examine{
     padding-bottom: 40px;
-}
-.el-card{
-    padding-bottom: 10px;
 }
 /deep/ .el-form-item__label{
     font-size: 12px;
@@ -466,10 +431,5 @@ export default {
     position: fixed;
     bottom: 0;
     right: 0;
-}
-.saoma{
-    position: absolute;
-    right: -30px;
-    top: 7px;
 }
 </style>
