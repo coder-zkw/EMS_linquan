@@ -15,22 +15,10 @@
                     <el-button size="mini" v-show="isShow" plain class="changeEquip" @click="ChangeEquip">重新选择设备</el-button>
                 </el-form-item>
                 <el-form-item prop="operator">
-                    <!-- <el-select v-model="form.operator" placeholder="请选择操作员">
+                    <el-select v-model="form.operator" placeholder="请选择操作员">
                         <i slot="prefix" class="iconTitle el-icon-user"></i>
                         <el-option v-for="(item,i) in operators" :key="i" :label="item.S_NAME" :value="item.S_NAME"></el-option>
-                    </el-select> -->
-                    <el-input v-model="form.operator" v-focus placeholder="请扫码选择操作员">
-                        <i slot="prefix" class="iconTitle el-icon-user"></i>
-                    </el-input>
-                    <el-button 
-                        v-if="!isKeyboard"
-                        class="saoma"
-                        size="mini" 
-                        circle 
-                        type="primary" 
-                        icon="el-icon-mobile-phone"
-                        @click="handleSaoma('operator')">
-                    </el-button>
+                    </el-select>
                 </el-form-item>
                 <el-form-item prop="password" class="clearMargin">
                     <el-input 
@@ -97,7 +85,7 @@ export default {
                     {required: true, message: '请选择设备！', tigger: 'blur'}
                 ],
                 operator: [
-                    {required: true, message: '操作员不能为空！', tigger: 'blur'}
+                    {required: true, message: '请选择操作员！', tigger: 'blur'}
                 ],
                 password: [
                     {required: true, message: '密码不能为空！', tigger: 'blur'}
@@ -125,16 +113,6 @@ export default {
         // 获取设备名,操作员列表
         this.getEquipments()
         this.getOpenType()
-    },
-    activated() {
-        // 扫码后返回页面更改可扫码框的值
-        const result = this.$store.state.scanItems
-        result.map(item => {
-            if(item.name === 'operator') {
-                this.form.operator = item.value
-                return
-            }
-        })
     },
     methods: {
         getEquipmentOnline() {
@@ -188,8 +166,6 @@ export default {
                             }else{
                                 this.$router.push('/home/work_order2')
                             }
-                            // 加了keep-alive,返回此页面需要密码清空
-                            this.form.password = ''
                         }else{
                             this.$message.error('密码错误！请重新输入')
                         }
@@ -197,7 +173,7 @@ export default {
                 }
             })
         },
-        // 重置
+        // 取消重置
         cancel() {
             this.$refs.form.resetFields()
         },
@@ -230,9 +206,6 @@ export default {
             localStorage.removeItem('company')
             localStorage.removeItem('operator')
             location.reload()
-        },
-        handleSaoma(item) {
-            this.$router.push('/device?name='+item)
         },
         update() {
             window.location.href = this.httpUrl+'app/appLinQuan.apk'
@@ -271,16 +244,8 @@ export default {
                 localStorage.setItem('isKeyboard', false)
             }
         }
-    },
-    // 自定义指令输入框自动聚焦
-    directives: {
-        focus: {
-            inserted: function (el) {
-                el.querySelector('input').focus()
-            }
-        }
     }
-}
+};
 </script>
 <style>
     .login{
@@ -345,11 +310,6 @@ export default {
         color:rgb(38, 181, 238);
     }
     .clearMargin{
-        margin: 5px 0;
-    }
-    .saoma{
-        position: absolute;
-        right: 5px;
-        top: 6px;
+        margin: 0;
     }
 </style>

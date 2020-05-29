@@ -81,17 +81,10 @@
                     </el-tab-pane>
                     <el-tab-pane label="密码管理" name="password">
                         <el-form :model="userForm" :rules="rules" ref="userForm" class="userForm" label-width="120px">
-                            <el-form-item label="选择机台：" prop="machine">
-                                <template>
-                                    <el-checkbox :indeterminate="isIndeterminate" v-model="checkAll" @change="handleCheckAllChange">全选</el-checkbox>
-                                    <div style="margin: 15px 0;"></div>
-                                    <el-checkbox-group v-model="userForm.machine" @change="handleCheckedMachinesChange">
-                                        <el-checkbox v-for="(item,i) in equipmentsOnline" :label="item.name" :key="i">{{item.name}}</el-checkbox>
-                                    </el-checkbox-group>
-                                </template>
-                                <!-- <el-select v-model="userForm.machine" :multiple="true" placeholder="请选择机台">
+                            <el-form-item label="机台：" prop="machine">
+                                <el-select v-model="userForm.machine" placeholder="请选择机台">
                                     <el-option v-for="(item,i) in equipmentsOnline" :key="i" :value="item.name"></el-option>
-                                </el-select> -->
+                                </el-select>
                             </el-form-item>
                             <el-form-item label="角色：" prop="roles">
                                 <el-select v-model="userForm.roles" placeholder="请选择角色">
@@ -99,9 +92,9 @@
                                     <el-option label="管理员" value="admin"></el-option>
                                 </el-select>
                             </el-form-item>
-                            <!-- <el-form-item label="旧密码：" prop="oldPass">
+                            <el-form-item label="旧密码：" prop="oldPass">
                                 <el-input type="password" v-model="userForm.oldPass"></el-input>
-                            </el-form-item> -->
+                            </el-form-item>
                             <el-form-item label="新密码：" prop="newPass">
                                 <el-input type="password" v-model="userForm.newPass" autocomplete="off"></el-input>
                             </el-form-item>
@@ -113,25 +106,6 @@
                                 <el-button type="info" @click="passReset">重 置</el-button>
                             </el-form-item>
                             </el-form>
-                    </el-tab-pane>
-                    <el-tab-pane label="其他" name="other">
-                        <div class="maxSet">选择机台：
-                            <template>
-                                <el-checkbox :indeterminate="isMaxIndeterminate" v-model="checkMaxAll" @change="handleCheckMaxAllChange">全选</el-checkbox>
-                                <div style="margin: 15px 0;"></div>
-                                <el-checkbox-group v-model="setMaxMachine" @change="handleCheckedMaxMachinesChange">
-                                    <el-checkbox v-for="(item,i) in equipmentsOnline" :label="item.name" :key="i">{{item.name}}</el-checkbox>
-                                </el-checkbox-group>
-                            </template>
-                        </div>
-                        <div class="maxSet">设置调机下，连续生产的最大数：
-                            <el-input type="number" v-model="maxProdouct"></el-input>
-                            <el-button class="addBtn" type="primary" @click="setMaxProduct">确定</el-button>
-                        </div>
-                        <div class="maxSet">设置首检超时停机时长的最大值：
-                            <el-input type="number" v-model="maxStop"></el-input>
-                            <el-button class="addBtn" type="primary" @click="setMaxStopTime">确定</el-button>
-                        </div>
                     </el-tab-pane>
                 </el-tabs>
             </div>
@@ -180,17 +154,11 @@ export default {
             activeName: 'machine',
             times: '',
             timeData: [],
-            equipmentsOnline: [
-                // {name: 'machine01'},
-                // {name: 'machine02'}
-            ],
-            checkAll: false,
-            // 全选按钮对应选择部分状态改变
-            isIndeterminate: false,
+            equipmentsOnline: [],
             userForm: {
-                machine: [],
+                machine: '',
                 roles: 'admin',
-                // oldPass: '',
+                oldPass: '',
                 newPass: '',
                 checkPass: ''
             },
@@ -201,28 +169,19 @@ export default {
                 roles: [
                     {required: 'true', message: '角色不能为空！', trigger: 'blur'}
                 ],
-                // oldPass: [
-                //     {required: 'true', message: '旧密码不能为空！', trigger: 'blur'}
-                // ],
+                oldPass: [
+                    {required: 'true', message: '旧密码不能为空！', trigger: 'blur'}
+                ],
                 newPass: [
                     {required: 'true', validator: validatePass, trigger: 'change'}
                 ],
                 checkPass: [
                     {required: 'true', validator: validatePass2, trigger: 'change'}
                 ]
-            },
-            // 设置最大值，选中的机台
-            setMaxMachine: [],
-            checkMaxAll: false,
-            isMaxIndeterminate: false,
-            maxProdouct: 0,
-            maxStop: 0,
-            httpUrl: 'http://mes.cn:7777/imes/',
-            killBrowserUrl: 'http://mes.cn:7777/smes/'
+            }
         }
     },
     created() {
-        // console.log(this.killBrowserUrl)
         this.getEquipments()
         this.getCheckList()
         this.getNoThunTimes()
@@ -383,52 +342,16 @@ export default {
                 } 
             }).catch(err => err)
         },
-        handleCheckAllChange(val) {
-            // 全选按钮选中，所有在线机台的name值放入选中机台数组
-            if(val) {
-                this.equipmentsOnline.map(item => {
-                    this.userForm.machine.push(item.name)
-                })
-            }else{
-                // 全选按钮未选中，则清空数组
-                this.userForm.machine = []
-            }
-            this.isIndeterminate = false;
-        },
-        // 设置最大值的全选方法
-        handleCheckMaxAllChange(val) {
-            // 全选按钮选中，所有在线机台的name值放入选中机台数组
-            if(val) {
-                this.equipmentsOnline.map(item => {
-                    this.setMaxMachine.push(item.name)
-                })
-            }else{
-                // 全选按钮未选中，则清空数组
-                this.setMaxMachine = []
-            }
-            this.isMaxIndeterminate = false;
-        },
-        handleCheckedMachinesChange(value) {
-            let checkedCount = value.length;
-            this.checkAll = checkedCount === this.equipmentsOnline.length;
-            this.isIndeterminate = checkedCount > 0 && checkedCount < this.equipmentsOnline.length;
-        },
-        // 设置最大数
-        handleCheckedMaxMachinesChange(value) {
-            let checkedCount = value.length;
-            this.checkMaxAll = checkedCount === this.equipmentsOnline.length;
-            this.isMaxIndeterminate = checkedCount > 0 && checkedCount < this.equipmentsOnline.length;
-        },
         passSubmit() {
             const {machine, roles, oldPass, newPass} = this.userForm
             let formdata = new FormData()
-            formdata.append('machineName', machine.join(','))
+            formdata.append('machineName', machine)
             formdata.append('r', roles)
-            // formdata.append('o', oldPass)
+            formdata.append('o', oldPass)
             formdata.append('n', newPass)
             this.$refs.userForm.validate(valid => {
                 if(valid) {
-                    axios.post(this.killBrowserUrl + 'cmd/changePwdV1', formdata)
+                    axios.post(this.killBrowserUrl + 'cmd/changePwd', formdata)
                     .then((res) => {
                         // console.log(res)
                         if(res.data.code === 200) {
@@ -446,28 +369,6 @@ export default {
         },
         passReset() {
             this.$refs.userForm.resetFields()
-        },
-        setMaxStopTime() {
-            console.log(this.maxStop)
-        },
-        setMaxProduct() {
-            console.log(this.maxProdouct)
-            if(this.maxProdouct > 0) {
-                let formdata = new FormData()
-                formdata.append('machineName', this.setMaxMachine.join(','))
-                formdata.append('count', this.maxProdouct)
-                axios.post(this.killBrowserUrl+'server/setDebugMax', formdata)
-                .then(res => {
-                    // console.log(res)
-                    if(res.data.code === 200){
-                        this.$message.success('连续生产最大数设置成功！')
-                    }else{
-                        this.$message.error('连续生产最大数设置失败！请重试')
-                    }
-                }).catch(err => err)
-            }else{
-                this.$message.warning('请设置正整数！')
-            }
         }
     },
     directives: {
@@ -499,15 +400,5 @@ export default {
 }
 .userForm{
     margin-top: 10px;
-}
-.el-input,.el-select{
-    width: 50%;
-}
-.maxSet{
-    padding: 15px 0;
-    border-bottom: 1px dashed #eee;
-}
-.maxSet .el-button{
-    margin-left: 50px;
 }
 </style>

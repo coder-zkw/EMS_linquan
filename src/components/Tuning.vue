@@ -58,7 +58,7 @@ export default {
             .then((res) => {
                 // console.log(res)
                 if(res.data.code === 200) {
-                    this.$router.push('/examine?work='+MT_WORKER+'&product='+MT_PRODUCT_HALF)
+                    this.$router.push('/home/examine?work='+MT_WORKER+'&product='+MT_PRODUCT_HALF)
                 }else{
                     this.$message.error('连接失败，请重试！')
                 }

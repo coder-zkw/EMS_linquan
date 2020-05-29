@@ -1,9 +1,6 @@
 <template>
     <div class="examine">
         <el-page-header @back="goBack" content="品检表单"></el-page-header>
-        <div class="exitBut">
-            <exit-btn :isFullscreen="isfullScreen"></exit-btn>
-        </div>
         <el-card>
             <el-form ref="form" :model="form" label-width="72px">
                 <el-row :gutter="12">
@@ -124,8 +121,7 @@
                         v-if="scope.row.CHECK_MODE === 'Y/N'" 
                         size="mini" 
                         v-model="scope.row.INPUTVAL" 
-                        @change="getStatus(scope.row, scope.$index)"
-                        placeholder="">
+                        @change="getStatus(scope.row, scope.$index)">
                         <el-option label="Y" value="Y"></el-option>
                         <el-option label="N" value="N"></el-option>
                     </el-select>
@@ -153,13 +149,10 @@
     </div>
 </template>
 <script>
-import ExitBtn from './ExitButton'
 import getCurrentTime from '../utils/currentTime'
 import axios from 'axios'
-import {machines, infos, products} from './examine.json'
 
 export default {
-    components: { ExitBtn },
     data() {
         return {
             userName: localStorage.getItem('userName'),
@@ -181,12 +174,12 @@ export default {
                 // 工序序号
                 processNum: '',
                 processName: '',
-                processDesc: ''
+                processDesc: '',
+                // 实物编号
+                identifier: '',
             },
             // 品检表单备注信息
             remark: '',
-            // 实物编号
-            identifier: '',
             // 品检最终是否通过结果
             resExamine: 'N',
             isFull: false,
@@ -198,26 +191,20 @@ export default {
     created() {
         this.getProductInfo()
     },
-    activated() {
-        // 扫码后返回页面更改可扫码框的值
-        this.changeSaoInput()
-    },
+    // activated() {
+    //     // 扫码后返回页面更改可扫码框的值
+    //     console.log(123)
+    //     this.changeSaoInput()
+    // },
     mounted() {
-        window.onresize = () => {
-            this.$nextTick(() => {
-                this.isFull = document.fullscreenElement || 
-                document.msFullscreenElement || 
-                document.mozFullScreenElement ||
-                document.webkitFullscreenElement || false
-            })
-        }
+        // console.log(123)
         this.changeSaoInput()
     },
     methods: {
         getProductInfo(){
             // 用工单号查询成品信息和成品工序
-            axios.get(' http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/GetProductend?wo='+this.form.orderVal)
-            // axios.get(this.httpUrl + 'MES/GetProductend?wo='+this.form.orderVal)
+            // axios.get(' http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/GetProductend?wo='+this.form.orderVal)
+            axios.get(this.httpUrl + 'MES/GetProductend?wo='+this.form.orderVal)
             .then(res => {
                 // console.log(res)
                 if(res.status === 200) {
@@ -315,8 +302,8 @@ export default {
                 }
             })
             // 根据成品编号和工序号查询出需要品检项目的列表
-            axios.get('http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/GetProductendGx?Productend=V0U0600770A&gx=01')
-            // axios.get(this.httpUrl+ 'MES/GetProductendGx?Productend='+ this.form.productNum + '&gx='+num)
+            // axios.get('http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/GetProductendGx?Productend=V0U0600770A&gx=01')
+            axios.get(this.httpUrl+ 'MES/GetProductendGx?Productend='+ this.form.productNum + '&gx='+num)
             .then(res => {
                 // console.log(res)
                 if(res.status === 200) {
@@ -350,7 +337,7 @@ export default {
             formData.WS_IDX = this.form.processNum
             formData.GX_NAME = this.form.processName
             formData.WS_DESC = this.form.processDesc
-            formData.identifier = this.identifier
+            formData.identifier = this.form.identifier
             formData.remark = this.remark
             formData.resExamine = this.resExamine
             formData.WS_DATA = this.tableData
@@ -360,9 +347,11 @@ export default {
                     axios.post(this.httpUrl + 'MES/QCProductend', formData)
                     .then(res => {
                         if(res.status === 200){
-                            this.$message.success('保存品检结果成功！')
+                            this.$message.success('品检结果保存成功！')
+                            // 返回工单列表
+                            this.$router.replace('/home/work_order2')
                         }else {
-                            this.$message.error('保存品检结果失败！请重试')
+                            this.$message.error('品检结果保存失败！请重试')
                         }
                     }).catch(err => err)
                 }else{
@@ -390,25 +379,19 @@ export default {
         changeSaoInput() {
             const result = this.$store.state.scanItems
             result.map(item => {
-                this[item.name] = item.value
+                // this[item.name] = item.value
+                if(item.name === 'identifier') {
+                    this.identifier = item.value
+                    return
+                }
             })
         }
-    },
-    watch: {
-        // 监听是否全屏，val为false时，当前不是全屏，点击后显示全屏按钮为true。否则为false变为非全屏按钮
-        isFull(val) {
-            if(val === false) {
-                this.isfullScreen = false
-            }else{
-                this.isfullScreen = true
-            }
-        }
-  }
+    }
 }
 </script>
 <style scoped>
 .examine{
-    padding-bottom: 40px;
+    padding-bottom: 60px;
 }
 .el-card{
     padding-bottom: 10px;
@@ -464,7 +447,7 @@ export default {
     color: #fff;
     z-index: 10;
     position: fixed;
-    bottom: 0;
+    bottom: 25px;
     right: 0;
 }
 .saoma{

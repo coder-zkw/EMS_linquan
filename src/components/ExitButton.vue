@@ -1,8 +1,25 @@
 <template>
     <span class="btngroup">
-        <el-button type="success" plain v-if="isShow" @click="$router.replace('/work_order')">条码验证</el-button>
-        <el-button type="info" :icon="!isFullscreen ? 'el-icon-full-screen' : 'el-icon-crop'" plain @click="toggleFullscreen"></el-button>
-        <el-button type="primary" plain @click="browserClosed">退出</el-button>
+        <el-button type="success" plain v-if="isShow" @click="$router.replace('/home/work_order')">条码验证</el-button>
+        <el-button type="info" 
+            size="small"
+            :icon="!isFullscreen ? 'el-icon-full-screen' : 'el-icon-crop'" 
+            plain 
+            @click="toggleFullscreen">
+        </el-button>
+        <!-- <el-button type="primary" plain @click="browserClosed">退出</el-button> -->
+        <!-- 自定义按钮下拉框选择 -->
+        <el-dropdown class="todo" trigger="click" @command="browserClosed">
+            <span class="el-dropdown-link">
+                <el-button type="primary" plain size="small">
+                    <i class="el-icon-s-unfold"></i>
+                </el-button>
+            </span>
+            <el-dropdown-menu slot="dropdown">
+                <el-dropdown-item command="update">切换用户</el-dropdown-item>
+                <el-dropdown-item v-if="isPc === 'true'" command="exit">退出</el-dropdown-item>
+            </el-dropdown-menu>
+        </el-dropdown>
     </span>
 </template>
 <script>
@@ -19,7 +36,8 @@ export default {
             // 全屏切换按钮
             // isFullscreen: true,
             // 获取是否为全屏状态
-            isFull: false
+            isFull: false,
+            isPc: localStorage.getItem('isKeyboard')
         }
     },
     mounted() {
@@ -34,13 +52,13 @@ export default {
         // }
     },
     methods: {
-        browserClosed() {
+        browserClosed(command) {
             const userName = localStorage.getItem('userName')
             // const author = localStorage.getItem('author')
-            const isPc = localStorage.getItem('isKeyboard')
+            // const isPc = localStorage.getItem('isKeyboard')
             // 非pc环境重回登录页面，pc环境调接口关闭浏览器
-            // if(author != '0') {
-            if(isPc != 'true') {
+            // if(isPc != 'true') {
+            if(command != 'exit') {
                 this.$router.replace('/login')
                 return
             }
@@ -84,3 +102,8 @@ export default {
     // }
 }
 </script>
+<style scoped>
+.todo{
+    margin-left: 10px;
+}
+</style>

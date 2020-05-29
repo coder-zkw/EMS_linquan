@@ -1,9 +1,6 @@
 <template>
     <div class="materials"> 
         <el-page-header @back="goBack" content="物料校验"></el-page-header>
-        <div class="exitBut">
-            <exit-btn :isFullscreen="isfullScreen"></exit-btn>
-        </div>
         <el-form class="formRef" @submit.native.prevent>
             <div class="scan_code">扫码校验</div>
             <el-form-item>
@@ -61,11 +58,9 @@
 </template>
 <script>
 import axios from 'axios'
-import ExitBtn from './ExitButton'
 import getCurrentTime from '../utils/currentTime'
 
 export default {
-    components: { ExitBtn },
     data() {
         return {
             // 工单号
@@ -95,16 +90,6 @@ export default {
             this.getMaterialsList()
         }
         
-    },
-    mounted() {
-        window.onresize = () => {
-            this.$nextTick(() => {
-                this.isFull = document.fullscreenElement || 
-                document.msFullscreenElement || 
-                document.mozFullScreenElement ||
-                document.webkitFullscreenElement || false
-            })
-        }
     },
     methods: {
         getMaterialsList() {
@@ -217,11 +202,11 @@ export default {
                                 this.goLayOut = true
                             }else{
                                 this.$message.error('保存设备名和工单失败！请重新尝试')
-                                this.$router.replace('/work_order')
+                                this.$router.replace('/home/work_order')
                             }
                         }).catch(() => {
                             this.$message.error('请求保存设备名和工单失败！请重新尝试')
-                            this.$router.replace('/work_order')
+                            this.$router.replace('/home/work_order')
                         })
                     }
                     // 保存扫描结果
@@ -230,11 +215,11 @@ export default {
                 }else {
                     // 校验失败，返回重新校验
                     this.$message.error('插入标识失败！请重新尝试')
-                    this.$router.replace('/work_order')
+                    this.$router.replace('/home/work_order')
                 }
             }).catch(() => {
                 this.$message.error('请求插入标识失败！请重新尝试')
-                this.$router.replace('/work_order')
+                this.$router.replace('/home/work_order')
             })
         },
         deleteScan(row) {
@@ -286,7 +271,7 @@ export default {
                 this.$message.success('校验成功，页面即将跳至看板页面！')
                 // 延迟3秒跳转至看板页面
                 setTimeout(() => {
-                    this.$router.push('/machine_1?work=' + this.work)
+                    this.$router.push('/home/machine_1?work=' + this.work)
                 }, 2000)
             }else{
                 let formdata = new FormData()
@@ -307,16 +292,6 @@ export default {
         focus: {
             inserted: function (el) {
                 el.querySelector('input').focus()
-            }
-        }
-    },
-    watch: {
-        // 监听是否全屏，val为false时，当前不是全屏，点击后显示全屏按钮为true。否则为false变为非全屏按钮
-        isFull(val) {
-            if(val === false) {
-                this.isfullScreen = false
-            }else{
-                this.isfullScreen = true
             }
         }
     }

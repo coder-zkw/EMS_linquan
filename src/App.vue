@@ -1,9 +1,8 @@
 <template>
   <div id="app">
-    <router-view v-if="!$route.meta.keepAlive"></router-view>
-    <keep-alive>
-      <router-view v-if="$route.meta.keepAlive"></router-view>
-    </keep-alive>
+    <!-- <keep-alive> -->
+      <router-view></router-view>
+    <!-- </keep-alive> -->
   </div>
 </template>
 
@@ -17,15 +16,16 @@ export default {
 html,body{
   margin: 0;
   padding: 4px;
+  font-family: "Helvetica Neue",Helvetica,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","微软雅黑",Arial,sans-serif;
 }
 .el-page-header{
-    margin: 30px 0;
+    margin: 10px 0;
 }
-.exitBut{
+/* .exitBut{
   position: absolute;
   right: 20px;
-  top: 20px;
-}
+  top: 74px;
+} */
 @media screen and (max-width: 900px) {
   .exitBut{
     top: 26px;

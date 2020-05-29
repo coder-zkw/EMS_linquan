@@ -93,12 +93,16 @@
       },
       exitSao() {
         const {name} = this.$route.query
-        // console.log(this.$route.fullPath)
+        // console.log(name)
         if(name) {
-          this.$router.replace('/examine')
+          if(name === 'operator') {
+            this.$router.replace('/login')
+          }else{
+            this.$router.replace('/home/examine')
+          }
         }else {
           const {isCheck, product, work} = this.$route.query
-          this.$router.replace('/materials_1?isCheck='+isCheck+'&product='+product+'&work='+work)
+          this.$router.replace('/home/materials_1?isCheck='+isCheck+'&product='+product+'&work='+work)
         } 
       }
     } 

@@ -8,24 +8,33 @@
       <div class="el-page-header__content">工单列表</div>
       <div class="exitBut">
         <el-date-picker
-          v-model="valueDate"
+          size="small"
+          v-model="startDate"
           type="date"
-          @change="valueChange"
           format="yyyy/MM/dd"
           value-format="yyyy/MM/dd"
-          placeholder="选择日期">
+          placeholder="起始日期">
+        </el-date-picker>
+        <el-date-picker
+          size="small"
+          v-model="endDate"
+          type="date"
+          format="yyyy/MM/dd"
+          value-format="yyyy/MM/dd"
+          placeholder="截止日期">
         </el-date-picker>
         <search-input @workSearch="workSearch"></search-input>
-        <el-button plain @click="refreshData">刷新</el-button>
-        <exit-btn class="btn_group"  :isFullscreen="isfullScreen"></exit-btn>
+        <el-button plain size="small" @click="refreshData">
+          <i class="el-icon-search"></i> 查询
+        </el-button>
       </div>
     </div>
     <div class="btnwrap">
-      <el-button type="info" @click="detailWorkOrder(currentRow)">查看详情</el-button>
-      <el-button type="success" :disabled="isTuneStart" v-if="isShowTune" @click="tuningCheck">开始调机</el-button>
-      <el-button type="primary" :disabled="isMaterial" v-if="isShowTune" @click="verification(currentRow)">条码验证</el-button>
-      <el-button type="danger" :disabled="isTuneEnd" v-if="isShowTune" @click="tuningEnd">结束调机</el-button>
-      <el-button type="warning" v-if="isShowExamine" @click="toExamine">首/末/巡检</el-button>
+      <el-button type="info" size="small" @click="detailWorkOrder(currentRow)">查看详情</el-button>
+      <el-button type="success" size="small" :disabled="isTuneStart" v-if="isShowTune" @click="tuningCheck">开始调机</el-button>
+      <el-button type="primary" size="small" :disabled="isMaterial" v-if="isShowTune" @click="verification(currentRow)">条码验证</el-button>
+      <el-button type="danger" size="small" :disabled="isTuneEnd" v-if="isShowTune" @click="tuningEnd">结束调机</el-button>
+      <el-button type="warning" size="small" v-if="isShowExamine" @click="toExamine">首/末/巡检</el-button>
     </div>
     <!-- 工单列表 -->
     <el-table
@@ -36,7 +45,7 @@
       highlight-current-row
       @current-change="handleCurrentChange"
       style="width: 100%">
-      <el-table-column type="index" width="42"></el-table-column>
+      <el-table-column type="index" width="45"></el-table-column>
       <el-table-column
         v-for="(item, i) in columns"
         :prop="item.S_NAME"
@@ -70,12 +79,11 @@
 
 <script>
 import axios from 'axios'
-import ExitBtn from './ExitButton'
 import SearchInput from './SearchInput'
 import getCurrentTime from '../utils/currentTime'
 
 export default {
-  components: { ExitBtn, SearchInput },
+  components: { SearchInput },
   data() {
     return {
       // 选择部分展示列
@@ -89,8 +97,12 @@ export default {
       detailData: [],
       // 弹出框切换显示/隐藏
       dialogWorkVisible: false,
-      // 选择日期的值
-      valueDate: getCurrentTime(new Date()).split(' ')[0],
+      // 开始日期的值
+      startDate: '',
+      // 结束日期的值
+      endDate: '',
+      // 匹配工单的值
+      inputVal: '',
       // 上移，下移按钮是否禁用
       moveTop: true,
       moveBottom: false,
@@ -111,6 +123,7 @@ export default {
       isfullScreen: false,
       // 开始、结束调机禁用切换
       isTuneStart: true,
+      // 条码验证按钮禁用切换
       isMaterial: true,
       isTuneEnd: true,
       // 按钮显示隐藏切换
@@ -120,6 +133,12 @@ export default {
   },
   // currentdata: null,
   created() {
+    // 获取此时时间点
+    const today = new Date()
+    // 默认结束时间为当天
+    this.endDate = getCurrentTime(today).split(' ')[0]
+    // 默认开始时间为当天的前两天
+    this.startDate = getCurrentTime(new Date(today.getTime()-2*24*60*60*1000)).split(' ')[0]
     // 获取工单列表
     this.getWorkList()
   },
@@ -132,11 +151,6 @@ export default {
       this.$nextTick(() => {
         // 监听工单列表高度变化
         this.tableHeight = window.innerHeight - this.$refs.tableRef.$el.offsetTop - 30
-        // 监听是否全屏切换
-        this.isFull = document.fullscreenElement || 
-          document.msFullscreenElement || 
-          document.mozFullScreenElement ||
-          document.webkitFullscreenElement || false
       })
     }
   },
@@ -160,25 +174,21 @@ export default {
     }
   },
   methods: {
-    getWorkList(time, isNew) {
+    getWorkList() {
       axios.get(this.httpUrl + 'MES/GetTitle?page=APS_WORKER_SIMPLE')
       // axios.get(' http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/getApsWorkerTitle')
       .then((res) => {
         this.columns = res.data
       })
       .catch(err => err)
-      const baseDate = time || this.valueDate
       // axios.get(' http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/GetApsWorker')
-      axios.get(this.httpUrl + 'MES/GetApsWorker?machine=' + this.userName + '&time=' + baseDate)
+       axios.get(this.httpUrl + 'MES/GetApsWorkerQ?machine=' + this.userName + '&time=' + this.startDate + '&EndTime=' +this.endDate)
       .then((res) => {
-        this.tableData = res.data
-        this.keepData = this.tableData
-        if(isNew === true) {
-          this.$message({
-            type: 'success',
-            message: '数据已更新',
-            duration: 1000
-          })
+        let datas = res.data
+        if (this.inputVal != '') {
+          this.tableData = datas.filter(item => (item.AW_APS_WORKER.indexOf(this.inputVal) != -1))
+        }else{
+          this.tableData = datas
         }
       })
       .catch(err => err)
@@ -206,10 +216,10 @@ export default {
     valueChange() {
       // console.log(this.valueDate)
       // 选择时间后，重新获取工单列表
-      this.getWorkList(this.valueDate)
+      this.getWorkList()
     },
     refreshData() {
-      this.getWorkList(this.valueDate, true)
+      this.getWorkList()
     },
     moveing(distance) {
       // 获取表格dom
@@ -279,7 +289,9 @@ export default {
         cancelButtonText: '取消',
         type: 'warning'
       }).then(() => {
-        this.toMaterials()
+        // 跳转至条码验证页面
+        // this.toMaterials()
+        this.verification(this.currentRow)
       }).catch(err => err)
     },
     tuningEnd(e, work, machine, product) {
@@ -294,6 +306,8 @@ export default {
           // console.log(res)
           if(res.data.code === 200) {
             this.$message.success('调机结束时间已保存成功！')
+            // 结束调机成功后，条码验证按钮、结束调机按钮禁用开
+            this.isMaterial = true
             this.isTuneEnd = true
           }else if(res.data.code === 401) {
             this.$message.error(res.data.value)
@@ -333,7 +347,7 @@ export default {
                 // 返回数组为空，说明没有正在调机的工单，开始调机开
                 if(machines.length === 0) {
                   this.isTuneStart = false
-                  this.isMaterial = false
+                  // this.isMaterial = false
                   this.isTuneEnd = true
                 }else {
                   const work = machines[0].MT_WORKER
@@ -355,6 +369,10 @@ export default {
                     this.isTuneEnd = true
                   }
                 }
+              }else{
+                // time不为0时，点击开始调机按钮后，开始调机按钮禁用开，条码验证按钮禁用关
+                this.isTuneStart = true
+                this.isMaterial = false
               }
             // code不为200时
             }else{
@@ -419,16 +437,16 @@ export default {
       if(AW_CLASS === 'APS') {
         axios.get(this.httpUrl + 'MES/GetProductHalf?wo='+ AW_PRODUCT_HALF)
         .then((res) => {
-            // console.log(res.data)
+            // console.log(res)
             let isCheck = '0';
             if(res.data.length > 0){
               isCheck = '1'
             }
-            this.$router.push('/materials_1?isCheck='+isCheck+'&work='+AW_APS_WORKER+'&product='+AW_PRODUCT_HALF)
+            this.$router.push('/home/materials_1?isCheck='+isCheck+'&work='+AW_APS_WORKER+'&product='+AW_PRODUCT_HALF)
         }).catch(err => err)
       }else{
         // 跳至物料验证页面
-        this.$router.push('/materials_1?isCheck='+SW_CHECK+'&work='+AW_APS_WORKER+'&product='+AW_PRODUCT_HALF)
+        this.$router.push('/home/materials_1?isCheck='+SW_CHECK+'&work='+AW_APS_WORKER+'&product='+AW_PRODUCT_HALF)
       }
     },
     toExamine() {
@@ -436,28 +454,24 @@ export default {
         return this.$message.error('请先选择制令单号！')
       }
       const {AW_APS_WORKER, AW_PRODUCT_HALF, AW_PLAN_DATE} = this.currentRow
-      this.$router.push('/examine?work='+AW_APS_WORKER+'&product='+AW_PRODUCT_HALF+'&date='+AW_PLAN_DATE)
-      // this.$router.push('/examine')
+      this.$router.push('/home/examine?work='+AW_APS_WORKER+'&product='+AW_PRODUCT_HALF+'&date='+AW_PLAN_DATE)
     },
     workSearch(value) {
-      // 从获取的所有数据中筛选出包含搜索框内容的数据
-      const searchData = this.keepData.filter(item => (item.AW_APS_WORKER.indexOf(value) != -1))
-      this.tableData = searchData
-    }
-  },
-  watch: {
-    // 监听是否全屏，val为false时，当前不是全屏，点击后显示全屏按钮为true。否则为false变为非全屏按钮
-    isFull(val) {
-      if(val === false) {
-        this.isfullScreen = false
-      }else{
-        this.isfullScreen = true
-      }
+      this.inputVal = value
     }
   }
 }
 </script>
 <style scoped>
+.el-page-header{
+  display: flex;
+  align-items: center;
+}
+.exitBut{
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+}
 .el-icon-s-home{
   padding: 4px;
 }
@@ -486,7 +500,7 @@ export default {
   border-bottom: 1px solid #eee;
 }
 .el-date-editor{
-  width: 180px;
+  width: 140px;
   margin-right: 10px;
 }
 .moveBit{

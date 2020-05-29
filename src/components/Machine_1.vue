@@ -1,9 +1,12 @@
 <template>
     <div class="machine1">
-        <el-page-header @back="goBack" content="机台看板"></el-page-header>
-        <div class="exitBut">
-            <exit-btn :isFullscreen="isfullScreen" :isShow="true"></exit-btn>
+        <div class="header">
+            <el-page-header @back="goBack" content="机台看板"></el-page-header>
+            <div class="exitBut">
+                <el-button type="success" plain @click="$router.replace('/home/work_order')">条码验证</el-button>
+            </div>
         </div>
+        
         <el-row :gutter="12">
             <el-col :span="12" v-for="(item,i) in titles" :key="item">
                 <el-card class="bottom_width" shadow="always">
@@ -56,13 +59,10 @@
     </div>
 </template>
 <script>
-// import axios from 'axios'
-import ExitBtn from './ExitButton'
 import getCurrentTime from '../utils/currentTime'
 import axios from 'axios'
 
 export default {
-    components: { ExitBtn },
     data() {
         return {
             userName: localStorage.getItem('userName'),
@@ -85,18 +85,8 @@ export default {
     created() {
         this.getMachineList()
         // 获取当前计数系数
-        this.getCoefficient()
+        // this.getCoefficient()
         this.getCount()
-    },
-    mounted() {
-        window.onresize = () => {
-            this.$nextTick(() => {
-                this.isFull = document.fullscreenElement || 
-                document.msFullscreenElement || 
-                document.mozFullScreenElement ||
-                document.webkitFullscreenElement || false
-            })
-        }
     },
     methods: {
         getCoefficient() {
@@ -112,24 +102,28 @@ export default {
         },
         getCount() {
             // this.killBrowserUrl.replace('http', 'ws') +'ws/'+this.userName
-            let websocket = new WebSocket('ws://192.168.13.12:10003/ws/'+this.userName)
+            // let websocket = new WebSocket('ws://192.168.13.12:10003/ws/'+this.userName)
+            let websocket = new WebSocket('ws://192.168.1.67:10003/ws/machine01')
             websocket.onopen = () => {
                 // websocket.send(formdata)
                 if(websocket.readyState === 1){
-                    // this.status = '在线'
-                    // 挂载获取的数据
-                    // this.getMachineList()
+                    // websocket连接成功，列表内容改为在线状态
+                    this.result[1] = '在线'
+                    // 重新挂载获取的数据
+                    this.getMachineList()
                 }
             }
             websocket.onerror = () => {
                 this.$message.error('websocket错误');
             }
             websocket.onmessage = (evt) => {
+                // console.log(222)
                 this.status = '在线'
                 // console.log(evt)
                 const result = JSON.parse(evt.data)
                 // 收到后台getUiCount制令，更新当前计数
                 if(result.cmd === 'getUiCount' && result.worker === this.rowData.AW_APS_WORKER){
+                    // console.log(123)
                     this.count = result.count
                 }else if(result.cmd === 'getUiForbidRun') {
                     this.$confirm('因条码验证未通过或失效，设备拒绝启动，是否前往条码验证页面？', '提示', {
@@ -137,7 +131,7 @@ export default {
                         cancelButtonText: '取消',
                         type: 'warning'
                     }).then(() => {
-                        this.$router.replace('/work_order')
+                        this.$router.replace('/home/work_order')
                     }).catch(err => err)
                 }
             }
@@ -174,20 +168,19 @@ export default {
         goBack() {
             this.$router.go(-1)
         }
-    },
-    watch: {
-        // 监听是否全屏，val为false时，当前不是全屏，点击后显示全屏按钮为true。否则为false变为非全屏按钮
-        isFull(val) {
-            if(val === false) {
-                this.isfullScreen = false
-            }else{
-                this.isfullScreen = true
-            }
-        }
     }
 }
 </script>
 <style scoped>
+.header{
+    display: flex;
+    align-items: center;
+}
+.exitBut{
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+}
 .bottom_width{
     margin-bottom: 20px;    
 }

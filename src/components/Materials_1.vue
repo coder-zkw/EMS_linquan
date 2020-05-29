@@ -1,9 +1,6 @@
 <template>
     <div class="materials"> 
         <el-page-header @back="goBack" content="物料校验"></el-page-header>
-        <div class="exitBut">
-            <exit-btn :isFullscreen="isfullScreen"></exit-btn>
-        </div>
         <el-form class="formRef" @submit.native.prevent>
             <div class="scan_code">扫码校验</div>
             <el-button type="primary" class="btnSao" :disabled="disabledFlag" @click="scanning()">开始扫码</el-button>
@@ -59,11 +56,9 @@
 </template>
 <script>
 import axios from 'axios'
-import ExitBtn from './ExitButton'
 import getCurrentTime from '../utils/currentTime'
 
 export default {
-    components: { ExitBtn },
     data() {
         return {
             // 工单号
@@ -90,25 +85,24 @@ export default {
         this.work_orderId = this.$route.query.product
         this.work = this.$route.query.work
         if(this.isCheck === '1'){
-            if(this.res_scan != '')
             // 需要验证
             this.getMaterialsList()
         }else{
             // 获取扫描结果列表
             this.getScansList()
         }
-            
+        // console.log(123)
     },
-    mounted() {
-        window.onresize = () => {
-            this.$nextTick(() => {
-                this.isFull = document.fullscreenElement || 
-                document.msFullscreenElement || 
-                document.mozFullScreenElement ||
-                document.webkitFullscreenElement || false
-            })
-        }
-    },
+    // activated() {
+    //     if(this.isCheck === '1'){
+    //         // if(this.res_scan != '')
+    //         // 需要验证
+    //         this.getMaterialsList()
+    //     }else{
+    //         // 获取扫描结果列表
+    //         this.getScansList()
+    //     }
+    // },
     methods: {
         getMaterialsList() {
             // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/GetTitle?page=PRD_APS_BOM')
@@ -137,6 +131,8 @@ export default {
         getScansList() {
             const res_scan = this.$store.state.res_scan
             if(res_scan != '') {
+                // 清空之前数据
+                this.noCheckData = []
                 const scans = res_scan.split(',')
                 // 扫描结果放入不验证数据列表
                 for(let i = 0; i < scans.length; i++) {
@@ -210,6 +206,7 @@ export default {
             })
            
         },
+        // 上传验证结果
         checkScans() {
             const PM_WORKER = this.work
             const PM_PRODUCT_HALF = this.work_orderId
@@ -222,9 +219,9 @@ export default {
                     this.$message.success('调机校验成功！')
                     // 调机成功保存数据后，返回工单页面前，把扫码数据列表清空
                     this.emptyScans()
-                    this.$router.replace('/work_order2')
+                    this.$router.replace('/home/work_order2')
                 }else{
-                    this.$message.error('调机校验失败！')
+                    this.$message.error('调机校验失败！请重试')
                 }
             }).catch(err => err)
         },
@@ -240,16 +237,6 @@ export default {
             }).then(() => {
                 this.emptyScans()
             })
-        }
-    },
-    watch: {
-        // 监听是否全屏，val为false时，当前不是全屏，点击后显示全屏按钮为true。否则为false变为非全屏按钮
-        isFull(val) {
-            if(val === false) {
-                this.isfullScreen = false
-            }else{
-                this.isfullScreen = true
-            }
         }
     }
 }

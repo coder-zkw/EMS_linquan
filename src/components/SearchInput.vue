@@ -1,9 +1,10 @@
 <template>
     <div class="search">
         <el-input
+            size="small"
             ref="inputRef"
-            placeholder="查找工单"
-            prefix-icon="el-icon-search"
+            placeholder="工单号匹配"
+            prefix-icon="el-icon-document-checked"
             v-model="workVal"
             @input="workSearch">
             <el-button 
@@ -69,10 +70,14 @@ export default {
 .search{
     display: inline;
 }
+.search .el-button{
+    position: relative;
+    left: 0;
+    bottom: -2px;
+}
 .el-date-editor, .el-input--prefix{
-    width: 180px;
+    width: 140px;
     margin-right: 10px;
-    line-height: 40px;
 }
 .keyboard{
     position: fixed;

@@ -8,23 +8,15 @@
       <div class="el-page-header__content">工单列表</div>
       <div class="exitBut">
         <el-date-picker
-          size="small"
-          v-model="startDate"
+          v-model="valueDate"
           type="date"
+          @change="valueChange"
           format="yyyy/MM/dd"
           value-format="yyyy/MM/dd"
-          placeholder="起始日期">
-        </el-date-picker>
-        <el-date-picker
-          size="small"
-          v-model="endDate"
-          type="date"
-          format="yyyy/MM/dd"
-          value-format="yyyy/MM/dd"
-          placeholder="截止日期">
+          placeholder="选择日期">
         </el-date-picker>
         <search-input @workSearch="workSearch"></search-input>
-        <el-button plain size="small" @click="refreshData">查询</el-button>
+        <el-button plain @click="refreshData">刷新</el-button>
         <!-- <exit-btn class="btn_group" :isFullscreen="isfullScreen"></exit-btn> -->
       </div>
     </div>
@@ -34,7 +26,7 @@
       border
       :height="tableHeight"
       style="width: 100%">
-      <el-table-column type="index" width="45"></el-table-column>
+      <el-table-column type="index" width="42"></el-table-column>
       <el-table-column
         v-for="(item, i) in columns"
         :prop="item.S_NAME"
@@ -92,12 +84,8 @@ export default {
       keepData: [],
       // 弹出框切换显示/隐藏
       dialogWorkVisible: false,
-      // 开始日期的值
-      startDate: '',
-      // 结束日期的值
-      endDate: '',
-      // 匹配工单的值
-      inputVal: '',
+      // 选择日期的值
+      valueDate: getCurrentTime(new Date()).split(' ')[0],
       // 上移，下移按钮是否禁用
       moveTop: true,
       moveBottom: false,
@@ -113,12 +101,9 @@ export default {
   },
   // currentdata: null,
   created() {
-    // 获取此时时间点
-    const today = new Date()
-    // 默认结束时间为当天
-    this.endDate = getCurrentTime(today).split(' ')[0]
-    // 默认开始时间为当天的前两天
-    this.startDate = getCurrentTime(new Date(today.getTime()-2*24*60*60*1000)).split(' ')[0]
+    // const screenHeight = window.screen.height
+    // const screenHeight = window.screen.availHeight
+  
     // 获取工单列表
     this.getWorkList()
   },
@@ -162,25 +147,22 @@ export default {
       })
       .catch(err => err)
       // console.log(userName)
+      // 有选择时间用选择的时间，没有用当前时间截取出年月日
+      const baseDate = time || this.valueDate
+      // console.log(baseDate)
       // axios.get(' http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/GetApsWorker')
-      axios.get(this.httpUrl + 'MES/GetApsWorkerQ?machine=' + userName + '&time=' + this.startDate + '&EndTime=' +this.endDate)
+      axios.get(this.httpUrl + 'MES/GetApsWorker?machine=' + userName + '&time=' + baseDate)
       .then((res) => {
         // console.log(res)
-        let datas = res.data
-        if (this.inputVal != '') {
-          this.tableData = datas.filter(item => (item.AW_APS_WORKER.indexOf(this.inputVal) != -1))
-        }else{
-          this.tableData = datas
+        this.tableData = res.data
+        this.keepData = this.tableData
+        if(isNew === true) {
+          this.$message({
+            type: 'success',
+            message: '数据已更新',
+            duration: 1000
+          })
         }
-        // workSearch(value)
-        // this.keepData = this.tableData
-        // if(isNew === true) {
-        //   this.$message({
-        //     type: 'success',
-        //     message: '数据已更新',
-        //     duration: 1000
-        //   })
-        // }
       })
       .catch(err => err)
       // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/getApsWorkerTitle')
@@ -199,7 +181,7 @@ export default {
       const worker = row.AW_APS_WORKER
       const isCheck = row.SW_CHECK
       // this.currentdata = row
-      if(company === '0') {
+      if(company === 0) {
         // 林全机台校验是否通过允许跳转
         this.$confirm('点击确定后，将会向机台写入制令信息，是否继续？', '提示', {
           confirmButtonText: '确定',
@@ -249,8 +231,7 @@ export default {
       this.getWorkList(this.valueDate)
     },
     refreshData() {
-      // this.getWorkList(this.valueDate, true)
-      this.getWorkList()
+      this.getWorkList(this.valueDate, true)
     },
     moveing(distance) {
       // 获取表格dom
@@ -276,10 +257,9 @@ export default {
       this.preHeight = height
     },
     workSearch(value) {
-      this.inputVal = value
       // 从获取的所有数据中筛选出包含搜索框内容的数据
-      // const searchData = this.keepData.filter(item => (item.AW_APS_WORKER.indexOf(value) != -1))
-      // this.tableData = searchData
+      const searchData = this.keepData.filter(item => (item.AW_APS_WORKER.indexOf(value) != -1))
+      this.tableData = searchData
     }
   }
 }
@@ -318,7 +298,7 @@ export default {
   border-bottom: 1px solid #eee;
 }
 .el-date-editor{
-  width: 140px;
+  width: 180px;
   margin-right: 10px;
 }
 .moveBit{
