@@ -39,32 +39,29 @@
         </div>
         <!-- 验证通过 -->
         <el-dialog
-            title="温馨提示"
-            :visible.sync="VerifiedDialogVisible"
-            :show-close="false"
-            :close-on-click-modal="false"
-            width="66%">
-            <el-alert
-                title="验证结果已提交！即将返回工单页面"
-                type="success"
-                center
-                show-icon
-                :closable="false">
-            </el-alert>
-            <span slot="footer" class="dialog-footer">
-                <el-button type="primary" @click="checkOver">确 定</el-button>
-            </span>
+        title="温馨提示"
+        :visible.sync="VerifiedDialogVisible"
+        :show-close="false"
+        :close-on-click-modal="false"
+        width="66%">
+        <el-alert
+            title="验证结果已提交！即将返回工单页面"
+            type="success"
+            center
+            show-icon
+            :closable="false">
+        </el-alert>
+        <span slot="footer" class="dialog-footer">
+            <el-button type="primary" @click="checkOver">确 定</el-button>
+        </span>
         </el-dialog>
-        <scan-frame v-show="scanShow" ref="scan" @getScan="getScan" @closeScan="closeScan"></scan-frame>
     </div>
 </template>
 <script>
 import axios from 'axios'
 import getCurrentTime from '../utils/currentTime'
-import ScanFrame from '../utils/ScanFrame'
 
 export default {
-    components: { ScanFrame },
     data() {
         return {
             // 工单号
@@ -82,10 +79,9 @@ export default {
             VerifiedDialogVisible: false,
             userName: localStorage.getItem('userName'),
             isCheck: this.$route.query.isCheck,
-            // ipad扫码
-            res_scan: '',
-            isPC: localStorage.getItem('isKeyboard') === 'true',
-            scanShow: false
+            // ipad扫码列表
+            res_scan: this.$store.state.res_scan,
+            isPC: localStorage.getItem('isKeyboard') === 'true'
         }
     },
     created() {
@@ -94,7 +90,13 @@ export default {
         if(this.isCheck === '1'){
             // 需要验证
             this.getMaterialsList()
+            // console.log(121)
+        }else if(!this.isPC && this.isCheck === '0'){
+            // ipad下不需验证情况，获取扫描结果列表
+            this.getScansList()
+            // console.log(122)
         }
+        // console.log(123)
     },
     methods: {
         getMaterialsList() {
@@ -115,26 +117,68 @@ export default {
             .then((res) => {
                 // console.log(res)
                 this.tableData = res.data
+                // ipad下比较新扫码值和需验证的列表项
+                if(!this.isPC) {
+                    this.compareScanResult(this.tableData, this.res_scan)
+                }
             })
             .catch(err => err)
         },
+        // ipad且不需验证， 获取扫描列表
+        getScansList() {
+            const res_scan = this.$store.state.res_scan
+            if(res_scan != '') {
+                // 清空之前数据
+                this.noCheckData = []
+                const scans = res_scan.split(',')
+                // 扫描结果放入不验证数据列表
+                for(let i = 0; i < scans.length; i++) {
+                    this.noCheckData.push({scan_result: scans[i]})
+                }
+            }
+        },
+        // ipad 比较扫码值与验证列表的验证项
+        compareScanResult(datas, scan_result) {
+            const scans = scan_result.split(',')
+            // 遍历查找列表中是否存在输入框中的值
+            for(let i = 0; i < scans.length; i++) {
+                let index = datas.findIndex((item) => (scans[i].toLowerCase( ).indexOf(item.PA_METRIAL.toLowerCase( )) != -1))
+                if(index != '-1') {
+                    // 若存在，把扫描结果写入扫描码处，并选中此行
+                    this.$set(this.tableData[index], 'scan_result' , scans[i])
+                    this.$set(this.tableData[index], 'checked' , true)
+                }else{
+                    // 有不存在项，把store中保存的扫描结果数据删除此项
+                    const newScans = scans.filter(item => item != scans[i])
+                    this.$store.dispatch('handleChangeScans', newScans.join(','))
+                    this.$message({
+                        message: scans[i]+'不属验证项，请重新扫码',
+                        type: 'error',
+                        duration: 1200
+                    })
+                }
+            }
+            // 需要验证的列表项全部验证成功，扫码按钮禁用，保存数据到后台，返回工单页面
+            // 遍历列表中checkd属性是否都为true
+            let checkedNum = this.tableData.filter(item => item.checked === true)
+            if(checkedNum.length != 0 && checkedNum.length === this.tableData.length) {
+                // 校验成功，禁用扫码框
+                this.disabledFlag = true
+                // 弹出确定验证成功框
+                this.VerifiedDialogVisible=true
+            }
+        },
         scanning() {
             if(!this.isPC) {//ipad 下，跳转至扫描页面
-                // const {isCheck, product, work} = this.$route.query
-                // this.$router.replace('/device?isCheck='+isCheck+'&product='+product+'&work='+work)
-                this.scanShow = true
-                // 开启扫描框后，触发子组件的开始扫描方法
-                this.$nextTick(() => {
-                    this.$refs.scan.handleScan()
-                })
+                const {isCheck, product, work} = this.$route.query
+                this.$router.replace('/device?isCheck='+isCheck+'&product='+product+'&work='+work)
             }else{//pc下扫码判断
                 this.scanPC()
             }
         },
-        // val有值ipad下扫码控件执行扫码，val无值则PC下扫描枪执行
-        scanPC(val) {
-            const value = val || this.inputVal
-            if(value.trim() === '') {
+        scanPC() {
+            const value = this.inputVal.trim()
+            if(value === '') {
                 this.$message.error('扫描结果为空！')
                 return
             }
@@ -173,10 +217,19 @@ export default {
             this.$router.go(-1)
         },
         deleteScan(row) {
-            const newData = this.noCheckData.filter(item => item.scan_result != row.scan_result)
-            this.noCheckData = newData
-            // Pc下，删除操作后扫码框重新获取焦点
-            if(this.isPC) this.scanFocus()
+            if(this.isPC) {
+                const newData = this.noCheckData.filter(item => item.scan_result != row.scan_result)
+                this.noCheckData = newData
+                // 扫码框获取焦点
+                this.scanFocus()
+            }else{
+                let scans = this.$store.state.res_scan
+                let newScans = scans.split(',').filter(item => item != row.scan_result)
+                this.$store.dispatch('handleChangeScans', newScans.join(','))
+                // 清空之前扫描数据，并重新获取不需验证清空下扫描数据渲染
+                this.noCheckData = []
+                this.getScansList()
+            }
         },
         scanFocus() {
             this.$refs.inputRef.focus()
@@ -184,6 +237,9 @@ export default {
         emptyScans() {
             if(this.isPC) {
                 this.scanFocus()
+            }else{
+                // ipad下清空vuex和无验证扫描列表数据
+                this.$store.dispatch('handleChangeScans', '')
             }
             this.noCheckData = []
         },
@@ -194,7 +250,7 @@ export default {
                 type: 'warning'
             }).then(() => {
                 // 手动提交后弹出提交验证数据且页面将返回框
-                this.VerifiedDialogVisible = true
+                this.VerifiedDialogVisible=true
             })
            
         },
@@ -217,7 +273,7 @@ export default {
             const PM_PRODUCT_HALF = this.work_orderId
             const PM_MACHINE = this.userName
             // ipad下从store获取扫码值
-            const PM_METRIAL = this.getScans()
+            const PM_METRIAL = this.isPC ? this.getScans() : this.$store.state.res_scan
             axios.post(this.httpUrl + 'MES/Metrial', {PM_WORKER, PM_MACHINE, PM_PRODUCT_HALF, PM_METRIAL})
             .then(res => {
                 // console.log(res)
@@ -246,16 +302,7 @@ export default {
             }).then(() => {
                 this.emptyScans()
             })
-        },
-        // 扫码后赋值
-        getScan(value) {
-            // ipad下扫码控件扫码结果直接传入函数执行
-            this.scanPC(value)
-        },
-        // 关闭扫码控件
-        closeScan() {
-            this.scanShow = false
-        },
+        }
     },
     directives: {
         focus: {

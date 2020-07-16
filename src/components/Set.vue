@@ -2,13 +2,8 @@
     <div class="set">
         <el-card>
             <div slot="header" class="clearfix">
-                <span><i class="el-icon-setting"></i> 上位机设置</span>
+                <span><i class="el-icon-setting"></i> 设置</span>
             </div>
-            <!-- <div v-if="!isSet">
-                请输入密码：
-                <el-input type="password" v-focus v-model="password" @keyup.enter.native="setting"></el-input>
-                <el-button type="primary" @click="setting">登录</el-button>
-            </div> -->
             <div>
                 <el-tabs v-model="activeName" @tab-click="handleClick">
                     <el-tab-pane label="验证机台管理" name="machine">
@@ -114,7 +109,7 @@
                             </el-form-item>
                             </el-form>
                     </el-tab-pane>
-                    <el-tab-pane label="其他" name="other">
+                    <el-tab-pane label="最大值管理" name="maxVal">
                         <div class="maxSet">选择机台：
                             <template>
                                 <el-checkbox :indeterminate="isMaxIndeterminate" v-model="checkMaxAll" @change="handleCheckMaxAllChange">全选</el-checkbox>
@@ -131,6 +126,32 @@
                         <div class="maxSet">设置首检超时停机时长的最大值：
                             <el-input type="number" v-model="maxStop"></el-input>
                             <el-button class="addBtn" type="primary" @click="setMaxStopTime">确定</el-button>
+                        </div>
+                    </el-tab-pane>
+                    <el-tab-pane label="权限管理" name="role">
+                        <div class="maxSet">选择指令：
+                            <template>
+                                <el-checkbox :indeterminate="isAllCommands" v-model="commandsAll" @change="handleCheckCommandsAllChange">全选</el-checkbox>
+                                <div style="margin: 15px 0;"></div>
+                                <el-checkbox-group v-model="setCommands" @change="handleCheckedCommandsChange">
+                                    <el-checkbox v-for="(item,i) in commands" :label="item.BR_ROLE" :value="i" :key="i"></el-checkbox>
+                                </el-checkbox-group>
+                            </template>
+                        </div>
+                        <div class="staff">选择员工：
+                            <el-autocomplete
+                                v-model="staffSelected"
+                                :fetch-suggestions="querySearch"
+                                placeholder="请输入姓名"
+                                :trigger-on-focus="false"
+                                ></el-autocomplete>
+                            <el-button type="primary" @click="handleSelect">添加</el-button>
+                        </div>
+                        <div class="stafftags">
+                            <el-tag v-for="item in staffRoles" :key="item" closable @close="deleteStaff(item)">{{item}}</el-tag>
+                        </div>
+                        <div class="btnWrap">
+                            <el-button type="success" v-show="staffRoles.length > 0" @click="commandSetSubmit">确定</el-button>
                         </div>
                     </el-tab-pane>
                 </el-tabs>
@@ -201,9 +222,6 @@ export default {
                 roles: [
                     {required: 'true', message: '角色不能为空！', trigger: 'blur'}
                 ],
-                // oldPass: [
-                //     {required: 'true', message: '旧密码不能为空！', trigger: 'blur'}
-                // ],
                 newPass: [
                     {required: 'true', validator: validatePass, trigger: 'change'}
                 ],
@@ -217,6 +235,19 @@ export default {
             isMaxIndeterminate: false,
             maxProdouct: 0,
             maxStop: 0,
+            // 员工角色数据
+            user: [],
+            staffs: [
+                // {value: 'abc'},{value: 'Avd'},{value: 'berg'},{value: 'cef'},{value: '刘备'},{value: '刘别名'},{value: 'edsf'},{value: 'Eeea'}
+                ],
+            staffSelected: '',
+            // 保存选中员工数组
+            staffRoles: [],
+            commands: ['生产', '调机', '首/中/末检', 'IPQC审核'],
+            // 权限全选按钮对应选择部分状态改变
+            isAllCommands: false,
+            commandsAll: false,
+            setCommands: [],
             httpUrl: 'http://mes.cn:7777/imes/',
             killBrowserUrl: 'http://mes.cn:7777/smes/'
         }
@@ -226,12 +257,12 @@ export default {
         this.getEquipments()
         this.getCheckList()
         this.getNoThunTimes()
+        this.getRoles()
     },
     methods: {
         handleClick(tab) {
             // console.log(tab)
             if(tab.name === 'password') {
-                // console.log('获取在线机台')
                 this.getEquipmentOnline()
             }
         },
@@ -271,14 +302,6 @@ export default {
                 }
             }).catch(err => err)
         },
-        // setting() {
-        //     if(this.password === '88888') {
-        //         this.isSet = true
-        //         this.password = ''
-        //     }else{
-        //         this.$message.error('密码错误！')
-        //     }
-        // },
         LformSubmit() {
             // console.log(this.Lform)
             let formdata = new FormData()
@@ -448,10 +471,10 @@ export default {
             this.$refs.userForm.resetFields()
         },
         setMaxStopTime() {
-            console.log(this.maxStop)
+            // console.log(this.maxStop)
         },
         setMaxProduct() {
-            console.log(this.maxProdouct)
+            // console.log(this.maxProdouct)
             if(this.maxProdouct > 0) {
                 let formdata = new FormData()
                 formdata.append('machineName', this.setMaxMachine.join(','))
@@ -468,6 +491,97 @@ export default {
             }else{
                 this.$message.warning('请设置正整数！')
             }
+        },
+        getRoles() {
+            axios.get(this.httpUrl + 'MES/GetNNLUserRole')
+            .then(res => {
+                // console.log(res)
+                if(res.status === 200) {
+                    this.user = res.data.user
+                    this.commands = res.data.role
+                    this.user.map(item => {
+                        this.staffs.push({value: item.EMP_NAME})
+                    })
+                }else {
+                    this.$message.error('获取员工信息失败！')
+                }
+            }).catch(err => err)
+        },
+        querySearch(queryString, cb) {
+            var staffs = this.staffs
+            var results = queryString ? staffs.filter(this.createFilter(queryString)) : staffs
+            // 调用 callback 返回建议列表的数据
+            cb(results)
+        },
+        createFilter(queryString) {
+            return (staff) => {
+                return (staff.value.toLowerCase().indexOf(queryString.toLowerCase()) === 0)
+            }
+        },
+        handleSelect() {
+            const isHas = this.staffs.findIndex(item => item.value === this.staffSelected)
+            if(isHas === -1) return this.$message.warning('该员工不存在！')
+            
+            if(this.staffRoles.indexOf(this.staffSelected) != -1) {
+                this.staffSelected = ''
+                return this.$message.warning('该员工已添加！')
+            }
+            this.staffRoles.push(this.staffSelected)
+            this.staffSelected = ''
+        },
+        deleteStaff(staff) {
+            this.staffRoles.splice(this.staffRoles.indexOf(staff), 1)
+        },
+        // 设置权限值改变
+        handleCheckedCommandsChange(value) {
+            let checkedCount = value.length;
+            this.commandsAll = checkedCount === this.commands.length;
+            this.isAllCommands = checkedCount > 0 && checkedCount < this.commands.length;
+        },
+        handleCheckCommandsAllChange(val) {
+            // 全选按钮选中
+            if(val) {
+                this.commands.map(item => {
+                    this.setCommands.push(item.BR_ROLE)
+                })
+            }else{
+                // 全选按钮未选中，则清空数组
+                this.setCommands = []
+            }
+            this.isAllCommands = false
+        },
+        commandSetSubmit() {
+            if(this.setCommands.length === 0) {
+                return this.$message.warning('未选择指令！')
+            }
+            // 员工工号数组
+            let staffNum = []
+            this.user.map(item => {
+                if(this.staffRoles.indexOf(item.EMP_NAME) != -1) {
+                    staffNum.push(item.EMP_NO)
+                }
+            })
+            // 配置权限数组
+            let commandNum = []
+            this.commands.map(item => {
+                if(this.setCommands.indexOf(item.BR_ROLE) != -1) {
+                    commandNum.push(item.BR_IDENTITY)
+                }
+            })
+            // console.log(commandNum.join(','))
+            axios.post(this.httpUrl + 'MES/SUserRole', {
+                BU_UID: staffNum.join(','),
+                BU_ROLE: commandNum.join(',')
+            }).then(res => {
+                // console.log(res)
+                if(res.data.code === 200) {
+                    this.$message.success('权限配置成功！')
+                    this.setCommands = []
+                    this.staffRoles = []
+                }else{
+                    this.$message.error('权限配置失败！请重试')
+                }
+            }).catch(err => err)
         }
     },
     directives: {
@@ -509,5 +623,17 @@ export default {
 }
 .maxSet .el-button{
     margin-left: 50px;
+}
+.staff{
+    margin-top: 20px;
+}
+.staff .el-button{
+    margin-left: 10px;
+}
+.stafftags .el-tag{
+    margin: 10px 10px 10px 0;
+}
+.btnWrap{
+    text-align: center;
 }
 </style>

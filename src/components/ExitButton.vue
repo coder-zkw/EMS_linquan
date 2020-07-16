@@ -3,6 +3,7 @@
         <el-button type="success" plain v-if="isShow" @click="$router.replace('/home/work_order')">条码验证</el-button>
         <el-button type="info" 
             size="small"
+            v-if="isPc === 'true'"
             :icon="!isFullscreen ? 'el-icon-full-screen' : 'el-icon-crop'" 
             plain 
             @click="toggleFullscreen">
@@ -16,7 +17,8 @@
                 </el-button>
             </span>
             <el-dropdown-menu slot="dropdown">
-                <el-dropdown-item command="update">切换用户</el-dropdown-item>
+                <el-dropdown-item command="userChange">切换用户</el-dropdown-item>
+                <el-dropdown-item v-if="isPc != 'true'" command="commandChange">更换指令</el-dropdown-item>
                 <el-dropdown-item v-if="isPc === 'true'" command="exit">退出</el-dropdown-item>
             </el-dropdown-menu>
         </el-dropdown>
@@ -58,33 +60,33 @@ export default {
             // const isPc = localStorage.getItem('isKeyboard')
             // 非pc环境重回登录页面，pc环境调接口关闭浏览器
             // if(isPc != 'true') {
-            if(command != 'exit') {
+            if(command === 'userChange') {
                 this.$router.replace('/login')
-                return
-            }
-            // let formdata = new FormData()
-            // formdata.append('machineName', userName)
-            this.$confirm('是否确认关闭浏览器？', '提示', {
-                confirmButtonText: '确定',
-                cancelButtonText: '取消',
-                type: 'warning'
-            }).then(() => {
-                let formdata = new FormData()
-                formdata.append('machineName', userName)
-                // 调用后台接口关闭浏览器
-                axios.post(this.killBrowserUrl + 'server/killClientBrowser', formdata)
-                // axios.get(this.killBrowserUrl + 'server/killClientBrowser?machineName='+userName)
-                .then(() => {
-                    // 直接关闭浏览器
+            }else if(command === 'commandChange') {
+                this.$router.replace('/home/command')
+            }else{
+                this.$confirm('是否确认关闭浏览器？', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    let formdata = new FormData()
+                    formdata.append('machineName', userName)
+                    // 调用后台接口关闭浏览器
+                    axios.post(this.killBrowserUrl + 'server/killClientBrowser', formdata)
+                    // axios.get(this.killBrowserUrl + 'server/killClientBrowser?machineName='+userName)
+                    .then(() => {
+                        // 直接关闭浏览器
+                    }).catch(() => {
+                        this.$message.error('浏览器关闭失败，请手动关闭！')
+                    })
                 }).catch(() => {
-                    this.$message.error('浏览器关闭失败，请手动关闭！')
+                    this.$message({
+                    type: 'info',
+                    message: '已取消退出'
+                    })       
                 })
-            }).catch(() => {
-                this.$message({
-                type: 'info',
-                message: '已取消退出'
-                })       
-            })
+            }
         },
         toggleFullscreen() {
             screenfull.toggle()

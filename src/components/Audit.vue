@@ -31,8 +31,8 @@
             <el-table class="detailTab" :data="auditData" ref="examineRef" size="mini" border style="width: 100%">
                 <el-table-column type="index" width="40"></el-table-column>
                 <el-table-column prop="QP_CATE_NAME" label="品检类别"></el-table-column>
-                <el-table-column prop="QP_QC_ITEM" label="品检项目"></el-table-column>
-                <el-table-column prop="QP_WL_SPEC" label="规格" :show-overflow-tooltip="true"></el-table-column>
+                <el-table-column prop="QP_QC_ITEM" label="品检项目" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="QP_WL_SPEC" label="规格" show-overflow-tooltip></el-table-column>
                 <el-table-column prop="QP_QC_REMARK" label="品检备注" width="100"></el-table-column>
                 <el-table-column prop="QP_TOOL_NAME" label="判定工具" width="70"></el-table-column>
                 <el-table-column prop="QP_INPUT_MODE" label="录入方式" width="70"></el-table-column>
@@ -70,7 +70,6 @@ import axios from 'axios'
 export default {
     data() {
         return {
-            userName: localStorage.getItem('userName'),
             // 品检数据列表
             tableData: [],
             // 首末检工单列表标题项及对应属性名

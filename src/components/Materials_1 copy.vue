@@ -3,10 +3,9 @@
         <el-page-header @back="goBack" content="物料校验"></el-page-header>
         <el-form class="formRef" @submit.native.prevent>
             <div class="scan_code">扫码校验</div>
-            <el-form-item v-if="isPC">
+            <el-form-item>
                 <el-input v-model="inputVal" v-focus ref="inputRef" :disabled="disabledFlag" @keyup.enter.native="scanning()"></el-input>
             </el-form-item>
-            <el-button v-else type="primary" class="btnSao" :disabled="disabledFlag" @click="scanning()">开始扫码</el-button>
         </el-form>
         <el-table
         v-if="isCheck==='1'"
@@ -39,32 +38,29 @@
         </div>
         <!-- 验证通过 -->
         <el-dialog
-            title="温馨提示"
-            :visible.sync="VerifiedDialogVisible"
-            :show-close="false"
-            :close-on-click-modal="false"
-            width="66%">
-            <el-alert
-                title="验证结果已提交！即将返回工单页面"
-                type="success"
-                center
-                show-icon
-                :closable="false">
-            </el-alert>
-            <span slot="footer" class="dialog-footer">
-                <el-button type="primary" @click="checkOver">确 定</el-button>
-            </span>
+        title="温馨提示"
+        :visible.sync="VerifiedDialogVisible"
+        :show-close="false"
+        :close-on-click-modal="false"
+        width="66%">
+        <el-alert
+            title="验证结果已提交！即将返回工单页面"
+            type="success"
+            center
+            show-icon
+            :closable="false">
+        </el-alert>
+        <span slot="footer" class="dialog-footer">
+            <el-button type="primary" @click="checkOver">确 定</el-button>
+        </span>
         </el-dialog>
-        <scan-frame v-show="scanShow" ref="scan" @getScan="getScan" @closeScan="closeScan"></scan-frame>
     </div>
 </template>
 <script>
 import axios from 'axios'
 import getCurrentTime from '../utils/currentTime'
-import ScanFrame from '../utils/ScanFrame'
 
 export default {
-    components: { ScanFrame },
     data() {
         return {
             // 工单号
@@ -82,10 +78,6 @@ export default {
             VerifiedDialogVisible: false,
             userName: localStorage.getItem('userName'),
             isCheck: this.$route.query.isCheck,
-            // ipad扫码
-            res_scan: '',
-            isPC: localStorage.getItem('isKeyboard') === 'true',
-            scanShow: false
         }
     },
     created() {
@@ -119,22 +111,8 @@ export default {
             .catch(err => err)
         },
         scanning() {
-            if(!this.isPC) {//ipad 下，跳转至扫描页面
-                // const {isCheck, product, work} = this.$route.query
-                // this.$router.replace('/device?isCheck='+isCheck+'&product='+product+'&work='+work)
-                this.scanShow = true
-                // 开启扫描框后，触发子组件的开始扫描方法
-                this.$nextTick(() => {
-                    this.$refs.scan.handleScan()
-                })
-            }else{//pc下扫码判断
-                this.scanPC()
-            }
-        },
-        // val有值ipad下扫码控件执行扫码，val无值则PC下扫描枪执行
-        scanPC(val) {
-            const value = val || this.inputVal
-            if(value.trim() === '') {
+            const value = this.inputVal.trim()
+            if(value === '') {
                 this.$message.error('扫描结果为空！')
                 return
             }
@@ -175,17 +153,15 @@ export default {
         deleteScan(row) {
             const newData = this.noCheckData.filter(item => item.scan_result != row.scan_result)
             this.noCheckData = newData
-            // Pc下，删除操作后扫码框重新获取焦点
-            if(this.isPC) this.scanFocus()
+            // 扫码框获取焦点
+            this.scanFocus()
         },
         scanFocus() {
             this.$refs.inputRef.focus()
         },
         emptyScans() {
-            if(this.isPC) {
-                this.scanFocus()
-            }
             this.noCheckData = []
+            this.scanFocus()
         },
         noCheckDataSubmit() {
             this.$confirm('点击确定后，将会结束扫码验证，是否继续？', '提示', {
@@ -194,11 +170,10 @@ export default {
                 type: 'warning'
             }).then(() => {
                 // 手动提交后弹出提交验证数据且页面将返回框
-                this.VerifiedDialogVisible = true
+                this.VerifiedDialogVisible=true
             })
            
         },
-        // 将扫码结果数组变为字符串格式
         getScans(){
             // console.log(this.noCheckData)
             let scans = []
@@ -216,7 +191,7 @@ export default {
             const PM_WORKER = this.work
             const PM_PRODUCT_HALF = this.work_orderId
             const PM_MACHINE = this.userName
-            // ipad下从store获取扫码值
+            // const PM_METRIAL = this.$store.state.res_scan
             const PM_METRIAL = this.getScans()
             axios.post(this.httpUrl + 'MES/Metrial', {PM_WORKER, PM_MACHINE, PM_PRODUCT_HALF, PM_METRIAL})
             .then(res => {
@@ -224,9 +199,7 @@ export default {
                 if(res.data.code===200) {
                     this.$message.success('调机校验成功！')
                     // 调机成功保存数据后，返回工单页面前，把扫码数据列表清空
-                    if(!this.isPC) {
-                        this.emptyScans()
-                    }
+                    // this.emptyScans()
                     this.$router.replace('/home/work_order2')
                 }else{
                     this.$message.error('调机校验失败！请重试')
@@ -236,6 +209,7 @@ export default {
         checkOver() {
             // 提交验证结果
             this.checkScans()
+            // 保存数据到服务器
             this.VerifiedDialogVisible=false
         },
         handleEmptyScans() {
@@ -246,16 +220,7 @@ export default {
             }).then(() => {
                 this.emptyScans()
             })
-        },
-        // 扫码后赋值
-        getScan(value) {
-            // ipad下扫码控件扫码结果直接传入函数执行
-            this.scanPC(value)
-        },
-        // 关闭扫码控件
-        closeScan() {
-            this.scanShow = false
-        },
+        }
     },
     directives: {
         focus: {
@@ -275,11 +240,6 @@ export default {
 .scan_code{
     margin-bottom: 20px;
     font-size: 16px;
-}
-.btnSao{
-    margin: 30px 0;
-    width: 100%;
-    font-size: 50px;
 }
 /deep/ .el-input__inner{
     height: 100px;

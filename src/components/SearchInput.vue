@@ -6,6 +6,7 @@
             placeholder="工单号匹配"
             prefix-icon="el-icon-document-checked"
             v-model="workVal"
+            clearable
             @input="workSearch">
             <el-button 
                 v-if="isKeyboard==='true'"
@@ -53,8 +54,9 @@ export default {
         show(e) {
             this.input = this.$refs.inputRef.$refs.input
             // this.layout = e.target.dataset.layout
-            if (!this.visible)
-                this.visible = true
+            // if (!this.visible)
+            //     this.visible = true
+            this.visible = !this.visible //改为显示隐藏切换
         },
         accept(text) {
             //   console.log(text);    
@@ -83,6 +85,6 @@ export default {
     position: fixed;
     left: 0;
     bottom: 0;
-    z-index: 100;
+    z-index: 1000;
 }
 </style>

@@ -1,41 +1,22 @@
 <template>
   <div class="WorkerOrder">
     <div class="el-page-header">
-      <div class="el-page-header__left">
-        <i class="el-icon-s-home"></i>
-        <div class="el-page-header__title">首页</div>
-      </div>
-      <div class="el-page-header__content">工单列表</div>
+      <el-page-header @back="$router.back()" content="工单列表"></el-page-header>
       <div class="exitBut">
-        <el-date-picker
-          size="small"
-          v-model="startDate"
-          type="date"
-          format="yyyy/MM/dd"
-          value-format="yyyy/MM/dd"
-          placeholder="起始日期">
-        </el-date-picker>
-        <el-date-picker
-          size="small"
-          v-model="endDate"
-          type="date"
-          format="yyyy/MM/dd"
-          value-format="yyyy/MM/dd"
-          placeholder="截止日期">
-        </el-date-picker>
         <search-input @workSearch="workSearch"></search-input>
-        <el-button plain size="small" @click="refreshData">查询</el-button>
+        <el-button plain size="small" @click="refreshData">
+          <i class="el-icon-search"></i> 查询
+        </el-button>
       </div>
     </div>
     <div class="btnwrap">
-      <el-button size="small" type="info" @click="detailWorkOrder(currentRow)">详情</el-button>
-          <el-button size="small" type="warning" @click="writeInfo(currentRow)">写入制令</el-button>
-          <el-button size="small" type="primary" @click="jumpTo(currentRow)">开始生产</el-button>
+      <el-button type="info" size="small" @click="detailWorkOrder(currentRow)">查看详情</el-button>
+      <el-button type="warning" size="small" @click="toExamine">首/中/末检</el-button>
     </div>
+    <!-- 工单列表 -->
     <el-table
       :data="tableData"
       ref="tableRef"
-      size="small"
       border
       :height="tableHeight"
       highlight-current-row
@@ -45,12 +26,10 @@
       <el-table-column
         v-for="(item, i) in columns"
         :prop="item.S_NAME"
-        :formatter="item.S_NAME==='AW_PLAN_DATETIME' ? formateDate : null"
         :label="item.S_CHINESE"
         :key="i"
-        :width="i===0 ? '60' : ''"
-        :min-width="item.S_NAME==='AW_LINE' ? '120' : ''"
-        show-overflow-tooltip>
+        :width="i===0 ? '65' : ''"
+        :min-width="item.S_NAME==='AW_LINE' ? '120' : ''">
       </el-table-column>
     </el-table>
     <!-- 上下按钮 -->
@@ -88,11 +67,11 @@ export default {
       columns: [],
       // 所有行数据全部展示
       tableData: [],
+      keepData: [],
       // 弹出框用，全部列
       columnsAll: [],
       // 弹出框用，某行具体内容
       detailData: [],
-      keepData: [],
       // 弹出框切换显示/隐藏
       dialogWorkVisible: false,
       // 开始日期的值
@@ -101,8 +80,6 @@ export default {
       endDate: '',
       // 匹配工单的值
       inputVal: '',
-      // 当前行信息
-      currentRow: null,
       // 上移，下移按钮是否禁用
       moveTop: true,
       moveBottom: false,
@@ -111,26 +88,28 @@ export default {
       // 表格高度
       tableHeight: 0,
       // 是否显示移动按钮
-      isMoveButton: true
+      isMoveButton: true,
+      // 当前行信息
+      currentRow: null,
+      // 查找工单的值
+      workVal: '',
+      userName: localStorage.getItem('userName'),
+      operator: localStorage.getItem('operator'),
+      jobNum: localStorage.getItem('jobNum')
     }
   },
   // currentdata: null,
   created() {
-    // 获取此时时间点
-    const today = new Date()
-    // 默认结束时间为当天
-    this.endDate = getCurrentTime(today).split(' ')[0]
-    // 默认开始时间为当天的前两天
-    this.startDate = getCurrentTime(new Date(today.getTime()-2*24*60*60*1000)).split(' ')[0]
-    // 获取工单列表
     this.getWorkList()
   },
   mounted() {
+    // 定义表格高度
     setTimeout(() => {
         this.tableHeight = window.innerHeight - this.$refs.tableRef.$el.offsetTop - 30
       }, 100)
     window.onresize = () => {
       this.$nextTick(() => {
+        // 监听工单列表高度变化
         this.tableHeight = window.innerHeight - this.$refs.tableRef.$el.offsetTop - 30
       })
     }
@@ -147,6 +126,7 @@ export default {
     // 获取表格的滚动区域
     const tableBody = this.$refs.tableRef.$refs.bodyWrapper
     // 当有滚动条时，滚动按钮出现，否则隐藏
+    // console.log(tableBody.scrollHeight, tableBody.clientHeight)
     if(tableBody.scrollHeight <= tableBody.clientHeight) {
       this.isMoveButton = false
     }else{
@@ -154,28 +134,31 @@ export default {
     }
   },
   methods: {
-    getWorkList(time, isNew) {
-      const userName = localStorage.getItem('userName')
+    getWorkList() {
       axios.get(this.httpUrl + 'MES/GetTitle?page=APS_WORKER_SIMPLE')
       // axios.get(' http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/getApsWorkerTitle')
       .then((res) => {
-        // console.log(res)
         this.columns = res.data
       })
       .catch(err => err)
-      // console.log(userName)
       // axios.get(' http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/GetApsWorker')
-      axios.get(this.httpUrl + 'MES/GetApsWorkerQ?machine=' + userName + '&time=' + this.startDate + '&EndTime=' +this.endDate)
+       axios.get(this.httpUrl + 'MES/GetApsWorkerQc?u=' + this.jobNum+'|'+this.operator)
       .then((res) => {
         // console.log(res)
-        let datas = res.data
-        if (this.inputVal != '') {
-          this.tableData = datas.filter(item => (item.AW_APS_WORKER.indexOf(this.inputVal) != -1))
+        if(res.status === 200) {
+          let datas = res.data
+          if(datas.length === 0) {
+            return this.$message.warning('查询数据数为0')
+          }
+          // 工单匹配有值则过滤查询的数据
+          if (this.inputVal != '') {
+            this.tableData = datas.filter(item => (item.AW_APS_WORKER.indexOf(this.inputVal) != -1))
+          }else{
+            this.tableData = datas
+          }
         }else{
-          this.tableData = datas
+          this.$message.error('获取品检数据失败！')
         }
-        // workSearch(value)
-        // this.keepData = this.tableData
       })
       .catch(err => err)
       // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/getApsWorkerTitle')
@@ -184,75 +167,10 @@ export default {
         this.columnsAll = res.data
       })
     },
-    jumpTo(row) {
-      if(this.currentRow === null) return this.$message.warning('请先选择工单')
-      // 之前是否有未完成工单，有则不允许下一步
-      axios.post(this.httpUrl + 'MES/WorkerExamine', {PLAN_DATE: row.PLAN_DATE})
-      .then(res => {
-        // console.log(res)
-        if(res.data.code === 200) {
-          this.$store.dispatch('handleChangeOrder', row)
-          const {AW_CLASS, AW_APS_WORKER, AW_PRODUCT_HALF, SW_CHECK} = row
-          if(AW_CLASS === 'APS') {
-            axios.get(this.httpUrl + 'MES/GetProductHalf?wo='+ AW_PRODUCT_HALF)
-            .then((res) => {
-                // console.log(res)
-                let isCheck = '0';
-                if(res.data.length > 0){
-                  isCheck = '1'
-                }
-                this.$router.push('/home/materials?isCheck='+isCheck+'&work='+AW_APS_WORKER+'&product='+AW_PRODUCT_HALF)
-            }).catch(err => err)
-          }else{
-            // 跳至物料验证页面
-            this.$router.push('/home/materials?isCheck='+SW_CHECK+'&work='+AW_APS_WORKER+'&product='+AW_PRODUCT_HALF)
-          }
-          
-        }else{
-          this.$message.warning('此工单日期之前还有未完成的工单！请按序生产')
-        }
-      }).catch(err => err)
-    },
-    writeInfo(row) {
-      if(this.currentRow === null) return this.$message.warning('请先选择工单')
-       // 获取缓存中设备名,是否林全设备
-      const company = localStorage.getItem('company')
-       // 工单号传参
-      const work_Id = row.AW_PRODUCT_HALF
-      const worker = row.AW_APS_WORKER
-      // this.currentdata = row
-      if(company === '0') {
-        // 林全机台校验是否通过允许跳转
-        this.$confirm('点击确定后，将会向机台写入制令信息，是否继续？', '提示', {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning'
-        }).then(() => {
-          const userName = localStorage.getItem('userName')
-          // 发送写入指令信息请求
-          let formdata = new FormData()  
-          formdata.append('machineName', userName)
-          formdata.append('worker', worker)
-          // axios.get(this.writeUrl +'cmd/writeMakeInfo?machineName='+userName+'&worker='+worker)
-          axios.post(this.writeUrl +'cmd/writeMakeInfo', formdata)
-          .then((res) => {
-            // console.log(res)
-            // 写入失败，提示手动输入
-            if(res.data.code != 200) {
-              this.$message.error('未找到'+work_Id+'制令信息！请在机台手动输入。')
-            }
-          }).catch(() => this.$message.error('制令信息写入失败！请在机台手动输入。'))
-          
-        }).catch(() => {
-          this.$message({
-            type: 'info',
-            message: '已取消写入指令信息'
-          })       
-        })
-      }
-    },
     detailWorkOrder(row) {
-      if(this.currentRow === null) return this.$message.warning('请先选择工单')
+      if(row === null) {
+        return this.$message.error('请先选择制令单号！')
+      }
       // console.log(this.columnsAll)
       for(let i = 0; i < this.columnsAll.length; i++) {
         // console.log(this.columnsAll[i].S_NAME)
@@ -267,10 +185,9 @@ export default {
     valueChange() {
       // console.log(this.valueDate)
       // 选择时间后，重新获取工单列表
-      this.getWorkList(this.valueDate)
+      this.getWorkList()
     },
     refreshData() {
-      // this.getWorkList(this.valueDate, true)
       this.getWorkList()
     },
     moveing(distance) {
@@ -296,18 +213,18 @@ export default {
       // 把当前滚动高度保存到上一次滚动高度中，留在最后比较用
       this.preHeight = height
     },
-    workSearch(value) {
-      this.inputVal = value
-      // 从获取的所有数据中筛选出包含搜索框内容的数据
-      // const searchData = this.keepData.filter(item => (item.AW_APS_WORKER.indexOf(value) != -1))
-      // this.tableData = searchData
-    },
-    formateDate(row) {
-      // console.log(row)
-      return row.AW_PLAN_DATETIME.substr(0, 10)
-    },
     handleCurrentChange(currentRow) {
       this.currentRow = currentRow
+    },
+    toExamine() {
+      if(this.currentRow === null) {
+        return this.$message.error('请先选择制令单号！')
+      }
+      const {AW_APS_WORKER, AW_MACHINE, AW_PRODUCT_HALF, AW_PLAN_DATE} = this.currentRow
+      this.$router.push('/home/examine?work='+AW_APS_WORKER+'&machine='+AW_MACHINE+'&product='+AW_PRODUCT_HALF+'&date='+AW_PLAN_DATE)
+    },
+    workSearch(value) {
+      this.inputVal = value
     }
   }
 }

@@ -77,8 +77,6 @@ export default {
             userName: localStorage.getItem('userName'),
             // 是否跳至看板页面
             goLayOut: false,
-            isFull: false,
-            isfullScreen: false,
             isCheck: this.$route.query.isCheck
         }
     },
@@ -88,8 +86,7 @@ export default {
         if(this.isCheck === '1'){
             // 需要验证
             this.getMaterialsList()
-        }
-        
+        } 
     },
     methods: {
         getMaterialsList() {
@@ -174,8 +171,10 @@ export default {
         },
         // 生产校验
         toCheckProduct() {
+            const user = localStorage.getItem('operator')
+            const jobNum = localStorage.getItem('jobNum')
             // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/GetRecord?w=' + this.work+'&m=' + this.userName)
-            axios.get(this.httpUrl + 'MES/GetRecord?w=' + this.work+'&m=' + this.userName)
+            axios.get(this.httpUrl + 'MES/GetRecord?w=' + this.work+'&m=' + this.userName +'&u='+jobNum+'|'+user)
             .then((res) => {
                 // console.log(res)
                 // 校验成功，跳转页面

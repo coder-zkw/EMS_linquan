@@ -1,334 +1,231 @@
 <template>
-    <div >
-        <div class="btnwrap">
-            <el-button type="primary" size="mini" @click="setFilters">自动过滤设置</el-button>
-            <el-button type="warning" size="mini" @click="clearFilters">清除过滤器</el-button>
-        </div>
-        <el-table 
-            :data="tableData" 
-            border 
-            size="mini" 
-            height="800" 
-            row-key="S_ID" 
-            :row-class-name="tableRowClassName"
-            v-el-table-infinite-scroll="load">
-            <!-- <el-table-column type="index"></el-table-column> -->
-            <el-table-column 
-                v-for="item in col"   
-                :key="item.S_ID" 
-                sortable 
-                :show-overflow-tooltip="true" 
-                :prop="item.S_COLUMN"    
-                :label="item.S_DESCRIBE">
-            </el-table-column>
-        </el-table>
-        <!-- 设置筛选条件弹出框 -->
-        <el-dialog
-            title="自定义自动过滤器"
-            class="dialog"
-            :visible.sync="dialogFilterVisible"
-            width="70%">
-            <el-table :data="dropCol" border size="mini">
-                <el-table-column label="过滤项" prop="S_DESCRIBE"></el-table-column>
-                <el-table-column label="数据类型" prop="S_COLUMN_TYPE"></el-table-column>
-                <el-table-column label="条件选择">
-                    <template slot-scope="scope">
-                        <el-date-picker 
-                            v-if="scope.row.S_COLUMN_TYPE==='DATE'" 
-                            type="date" 
-                            placeholder="选择日期" 
-                            size="mini" 
-                            format="yyyy/MM/dd"
-                            value-format="yyyy/MM/dd"
-                            v-model="scope.row.dateFilter">
-                        </el-date-picker>
-                        <div v-else>
-                            <el-input placeholder="请输入一个值" v-model="scope.row.inputVal" size="mini">
-                                <el-select v-model="scope.row.selectVal" slot="prepend" placeholder="筛选条件">
-                                    <el-option
-                                    v-for="item in options"
-                                    :key="item.value"
-                                    :label="item.label"
-                                    :value="item.value">
-                                    </el-option>
-                                </el-select>
-                            </el-input>
-                            <!-- <el-select v-model="scope.row.selectVal" size="mini" placeholder="请选择条件">
-                                <el-option
-                                v-for="item in options"
-                                :key="item.value"
-                                :label="item.label"
-                                :value="item.value">
-                                </el-option>
-                            </el-select>
-                            <el-input v-model="scope.row.inputVal" size="mini" placeholder="请输入一个值"></el-input> -->
-                        </div>
-                    </template>
-                </el-table-column>
-            </el-table>
-            <span slot="footer" class="dialog-footer">
-                <el-button @click="dialogFilterVisible = false">取 消</el-button>
-                <el-button type="primary" @click="filtersSubmit">确 定</el-button>
-            </span>
-        </el-dialog>
+  <div>
+    <DxDataGrid
+      id="gridContainer"
+      :ref="dataGridRefName"
+      :data-source="orders"
+      :show-borders="true"
+      :allow-column-reordering="true"
+      :allow-column-resizing="true"
+      :column-auto-width="true"
+    >
+      <DxFilterRow
+        :visible="showFilterRow"
+        :apply-filter="currentFilter"
+      />
+      <DxHeaderFilter
+        :visible="showHeaderFilter"
+      />
+      <DxSearchPanel
+        :visible="true"
+        :width="240"
+        placeholder="搜索"
+      />
+      <DxPaging :page-size="30"/>
+      <!-- <DxScrolling mode="infinite"/> -->
+      <!-- <DxColumn
+        :header-filter="{ groupInterval: 10000 }"
+        data-field="SW_STATUS"
+        caption="工单类别"
+      />
+      <DxColumn
+        :calculate-filter-expression="calculateFilterExpression"
+        :header-filter="{ dataSource: orderHeaderFilter }"
+        data-field="AW_PLAN_DATE"
+        caption="计划日期"
+        alignment="right"
+        data-type="date"
+        format="yyyy/M/d"
+      />
+      <DxColumn
+        data-field="PW_OK"
+        caption="已完工量"
+        alignment="right"
+      />
+      <DxColumn
+        :header-filter="{ dataSource: saleAmountHeaderFilter }"
+        :editor-options="{ format: 'currency', showClearButton: true }"
+        data-field="PW_MACHINE"
+        caption="机台"
+        alignment="right"
+        format="currency"
+      />
+      <DxColumn
+        :header-filter="{ allowSearch: true }"
+        data-field="PW_WORKER"
+        caption="工单"
+      /> -->
+      <DxColumn 
+        v-for="item in titles" 
+        :key="item.S_ID" 
+        alignment="left"
+        :data-field="item.S_COLUMN" 
+        :caption="item.S_DESCRIBE"
+        :data-type="item.S_COLUMN_TYPE === 'DATE'? 'date' : ''"/>
+    </DxDataGrid>
+    <div class="options">
+      <div class="caption">Options</div>
+      <div class="option">
+        <span>Apply Filter</span>
+        <DxSelectBox
+          id="useFilterApplyButton"
+          :items="applyFilterTypes"
+          :value.sync="currentFilter"
+          :disabled="!showFilterRow"
+          value-expr="key"
+          display-expr="name"
+        />
+      </div>
+      <div class="option">
+        <DxCheckBox
+          :value.sync="showFilterRow"
+          text="Filter Row"
+          @valueChanged="clearFilter()"
+        />
+      </div>
+      <div class="option">
+        <DxCheckBox
+          :value.sync="showHeaderFilter"
+          text="Header Filter"
+          @valueChanged="clearFilter()"
+        />
+      </div>
     </div>
+  </div>
 </template>
 <script>
-    import Sortable from 'sortablejs'
-    import axios from 'axios'
-    import elTableInfiniteScroll from 'el-table-infinite-scroll'
-    import titles from './title.json'
-    import moni from './da.json'
- 
-    export default {
-        data () {
-            return {
-                userName: localStorage.getItem('userName'),
-                // 获取列项
-                col:[],
-                // 保存排序后的列项
-                dropCol:[],
-                // 获取的所有数据
-                datas: [],
-                // 渲染列表数据
-                tableData: [],
-                // 保留数据，清空筛选条件后，用于渲染原始数据
-                keepData: [],
-                dialogFilterVisible: false,
-                options: [
-                    {
-                        value: '===',
-                        label: '等于='
-                    }, 
-                    {
-                        value: '!=',
-                        label: '不等于<>'
-                    }, 
-                    {
-                        value: '()',
-                        label: '包含'
-                    }, 
-                    {
-                        value: '!()',
-                        label: '不包含'
-                    }, 
-                    {
-                        value: '>',
-                        label: '大于>'
-                    }, 
-                    {
-                        value: '>=',
-                        label: '大于>='
-                    }, 
-                    {
-                        value: '<',
-                        label: '小于<'
-                    }, 
-                    {
-                        value: '<=',
-                        label: '小于<='
-                    }
-                ],
-                filters: [],
-                count: 100
-            }
-        },
-        created() {
-            this.getDatas()
-        },
-        mounted () {
-            this.rowDrop()
-            
-            this.columnDrop()
-        },
-        methods: {
-            getDatas() {
-                // axios.get(this.httpUrl + 'MES/GetPReportQuery')
-                // .then((res) => {
-                //     // console.log(res)
-                //     if(res.data.code === 200) {
-                //         this.da = res.data.data
-                //         for(var i = 0; i< 1003; i++){
-                //             this.datas.push(this.da[i])
-                //         }
-                //         console.log(this.datas.length)
-                //         for(var i = 0; i< this.count; i++){
-                //             this.tableData.push(this.datas[i])
-                //         }
-                //         // console.log(this.tableData.length)
-                //         // this.keepData = this.tableData
-                //     }
-                // })
-                // .catch(err => err)
+import {
+  DxDataGrid,
+  DxColumn,
+  DxHeaderFilter,
+  DxSearchPanel,
+  DxFilterRow,
+  DxPaging
+} from 'devextreme-vue/data-grid'
+import { DxSelectBox, DxCheckBox } from 'devextreme-vue'
+// 汉化
+import zhMessages from 'devextreme/localization/messages/zh.json'
+import { locale, loadMessages } from 'devextreme/localization'
 
-                this.col = titles.data
-                this.dropCol = this.col
+import 'devextreme/dist/css/dx.common.css'
+import 'devextreme/dist/css/dx.light.css'
+// import service from './data.js'
+import service from './da.json'
+import title from './title.json'
+const getOrderDay = (rowData) => {
+  return (new Date(rowData.OrderDate)).getDay()
+}
 
-                this.da = moni.data
-                this.keepData = this.da
-                    for(var i = 0; i< 2003; i++){
-                        this.datas.push(this.da[i])
-                    }
-                    // console.log(this.datas.length)
-                    for(var i = 0; i< this.count; i++){
-                        this.tableData.push(this.datas[i])
-                    }
-
-                // axios.get(this.httpUrl + 'MES/GetRpPattern?rpname=PReportQuery&user=0')
-                // .then((res) => {
-                //     // console.log(res)
-                //     if(res.data.code === 200){
-                //         this.col = res.data.data
-                //         this.dropCol = this.col
-                //     }
-                // })
-            },
-            // 行拖拽
-            rowDrop () {
-                // 此时找到的元素是要拖拽元素的父容器
-                const tbody = document.querySelector('.el-table__body-wrapper tbody')
-                const _this = this
-                Sortable.create(tbody, {
-                //  指定父元素下可被拖拽的子元素
-                draggable: ".el-table__row",
-                    onEnd ({ newIndex, oldIndex }) {
-                        const currRow = _this.tableData.splice(oldIndex, 1)[0]
-                        _this.tableData.splice(newIndex, 0, currRow)
-                    }
-                })
-            },
-            // 列拖拽
-            columnDrop () {
-                const wrapperTr = document.querySelector('.el-table__header-wrapper tr')
-                this.sortable = Sortable.create(wrapperTr, {
-                    animation: 180,
-                    delay: 0,
-                    onEnd: evt => {
-                        // console.log(evt)
-                        // 截取一条数据保存
-                        const oldItem = this.dropCol[evt.oldIndex]
-                        this.dropCol.splice(evt.oldIndex, 1)
-                        // 把截取的数据插到新数据之前
-                        this.dropCol.splice(evt.newIndex, 0, oldItem)
-                        // console.log(this.dropCol)
-                        // this.col = this.dropCol  ***此种写法无效
-                        // 可能是顺序改变，虚拟dom检测不到，把原数据清空，再重新赋值排序后的数据有效
-                        var newArray = this.dropCol
-                        this.col = []
-                        this.$nextTick(() => {
-                            this.col = newArray
-                        })
-                    }
-                })
-            },
-            clearFilters() {
-                // this.tableData = this.keepData
-                // 清空数据，再从新加载数据
-                this.datas = []
-                this.getDatas()
-            },
-            setFilters() {
-                this.dialogFilterVisible=true
-                // console.log(this.col)
-                // this.filters = this.col
-            },
-            filtersSubmit() {
-                // console.log(this.dropCol)
-                let tempDate = this.tableData
-                // console.log(tempDate)
-                const filterArr = this.dropCol
-                // console.log(filterArr)
-                for(let i = 0; i < filterArr.length; i++) {
-                    const dateVal = filterArr[i].dateFilter
-                    const selectVal = filterArr[i].selectVal
-                    const inputVal = filterArr[i].inputVal
-                    const type = filterArr[i].S_COLUMN
-                    // console.log(type)
-                    if(dateVal) {
-                        // console.log(filterArr[i].dateFilter)
-                        tempDate = tempDate.filter(item => item.AW_PLAN_DATE === dateVal)
-                        // console.log(this.tableData)
-                    }else if(selectVal) {
-                        switch(selectVal) {
-                            case '===': tempDate = tempDate.filter(item => item[type] == inputVal)
-                            break;
-                            case '!=': tempDate = tempDate.filter(item => item[type] != inputVal)
-                            break;
-                            case '()': tempDate = tempDate.filter(item => item[type].indexOf(inputVal) != -1)
-                            break;
-                            case '!()': tempDate = tempDate.filter(item => item[type].indexOf(inputVal) === -1)
-                            break;
-                            case '>': tempDate = tempDate.filter(item => item[type] > inputVal)
-                            break;
-                            case '>=': tempDate = tempDate.filter(item => item[type] >= inputVal)
-                            break;
-                            case '<': tempDate = tempDate.filter(item => item[type] < inputVal)
-                            break;
-                            case '<=': tempDate = tempDate.filter(item => item[type] <= inputVal)
-                            break;
-                        }
-                        // this.tableData = tempDate
-                    }
-                    this.tableData = tempDate
-                }
-
-                this.dialogFilterVisible = false
-            },
-            load() {
-                // 当渲染列表数据数达到了全部数据数，退出函数
-                if(this.tableData.length >= this.datas.length) {
-                    return
-                }
-                // 列表有数据时执行加载，因为页面初始化渲染时会执行两次，还未弄明白为什么，加上这个解决
-                if(this.tableData.length > 0) {
-                    // console.log(this.count)
-                    // 数据每次下拉增加渲染100条
-                    this.count += 100
-                    this.$message.success('加载下一页')
-                    // console.log(this.tableData.length)
-                    // 循环渲染新增的100条数据
-                    for(let i = this.count-100; i < this.count; i++){
-                        // 当循环到全部数据的最后一条时，提示没有数据了，并退出函数
-                        if(i >= this.datas.length) {
-                            this.$message.error('没有数据了！')
-                            return
-                        }
-                        this.tableData.push(this.datas[i])
-                    }
-                }    
-            },
-            tableRowClassName({row, rowIndex}) {
-                if (rowIndex%2 === 1) {
-                return 'tag-row'
-                }
-                return ''
-            }
+export default {
+  components: {
+    DxSelectBox,
+    DxCheckBox,
+    DxDataGrid,
+    DxColumn,
+    DxHeaderFilter,
+    DxSearchPanel,
+    DxFilterRow,
+    DxPaging
+  },
+  data() {
+    const applyFilterTypes = [
+        {
+          key: 'auto',
+          name: 'Immediately'
         },
-        directives: {
-            'el-table-infinite-scroll': elTableInfiniteScroll
+        {
+          key: 'onClick',
+          name: 'On Button Click'
+        }], currentFilter = applyFilterTypes[0].key;
+    return {
+    //   orders: service.getOrders(),
+      titles: title.data,
+      orders: service.data,
+      showFilterRow: true,
+      showHeaderFilter: true,
+      applyFilterTypes,
+      saleAmountHeaderFilter:  [{
+        text: 'Less than $3000',
+        value: ['SaleAmount', '<', 3000]
+      }, {
+        text: '$3000 - $5000',
+        value: [
+          ['SaleAmount', '>=', 3000],
+          ['SaleAmount', '<', 5000]
+        ]
+      }, {
+        text: '$5000 - $10000',
+        value: [
+          ['SaleAmount', '>=', 5000],
+          ['SaleAmount', '<', 10000]
+        ]
+      }, {
+        text: '$10000 - $20000',
+        value: [
+          ['SaleAmount', '>=', 10000],
+          ['SaleAmount', '<', 20000]
+        ]
+      }, {
+        text: 'Greater than $20000',
+        value: ['SaleAmount', '>=', 20000]
+      }],
+      calculateFilterExpression(value, selectedFilterOperations, target) {
+        let column = this;
+        if(target === 'headerFilter' && value === 'weekends') {
+          return [[getOrderDay, '=', 0], 'or', [getOrderDay, '=', 6]];
         }
+        return column.defaultCalculateFilterExpression.apply(this, arguments);
+      },
+      currentFilter,
+      dataGridRefName: 'dataGrid'
+    };
+  },
+  created() {
+    loadMessages(zhMessages)
+    locale(navigator.language)
+  },
+  methods: {
+    orderHeaderFilter(data) {
+      data.dataSource.postProcess = (results) => {
+        results.push({
+          text: 'Weekends',
+          value: 'weekends'
+        });
+        return results;
+      };
+    },
+    clearFilter() {
+      this.$refs[this.dataGridRefName].instance.clearFilter();
     }
+  }
+};
 </script>
 <style scoped>
-.btnwrap{
-    margin-bottom: 10px;
-    text-align: right;
+#gridContainer {
+  height: 640px;
 }
-/deep/ .el-table--mini td, .el-table--mini th{
-    padding: 0;
+
+.options {
+  padding: 20px;
+  margin-top: 20px;
+  background-color: rgba(191, 191, 191, 0.15);
 }
-/deep/ .dialog .el-table--mini td, .el-table--mini th{
-    padding: 4px 0;
+
+.caption {
+  font-size: 18px;
+  font-weight: 500;
 }
-.el-select-dropdown__item{
-    font-size: 12px;
-    height: 24px; 
-    line-height: 24px;
+
+.option {
+  margin-top: 10px;
 }
-.el-select{
-    width: 110px;
+
+.option > span {
+  margin-right: 10px;
 }
-/deep/ .tag-row, /deep/ .el-table th{
-    background: #efffef;
+
+.option > .dx-selectbox {
+  display: inline-block;
+  vertical-align: middle;
 }
 </style>

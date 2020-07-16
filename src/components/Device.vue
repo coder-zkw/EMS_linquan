@@ -91,11 +91,14 @@
         // 退出扫码返回校验页面
         this.exitSao()
       },
-      exitSao() {
+      exitSao () {
+        // 手动退出，先关闭扫描
+        this.cancelScan()
+        
         const {name} = this.$route.query
         // console.log(name)
         if(name) {
-          if(name === 'operator') {
+          if(name === 'jobNum') {
             this.$router.replace('/login')
           }else{
             this.$router.replace('/home/examine')

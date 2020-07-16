@@ -25,12 +25,8 @@
         </el-date-picker>
         <search-input @workSearch="workSearch"></search-input>
         <el-button plain size="small" @click="refreshData">查询</el-button>
+        <!-- <exit-btn class="btn_group" :isFullscreen="isfullScreen"></exit-btn> -->
       </div>
-    </div>
-    <div class="btnwrap">
-      <el-button size="small" type="info" @click="detailWorkOrder(currentRow)">详情</el-button>
-          <el-button size="small" type="warning" @click="writeInfo(currentRow)">写入制令</el-button>
-          <el-button size="small" type="primary" @click="jumpTo(currentRow)">开始生产</el-button>
     </div>
     <el-table
       :data="tableData"
@@ -38,8 +34,6 @@
       size="small"
       border
       :height="tableHeight"
-      highlight-current-row
-      @current-change="handleCurrentChange"
       style="width: 100%">
       <el-table-column type="index" width="45"></el-table-column>
       <el-table-column
@@ -51,6 +45,13 @@
         :width="i===0 ? '60' : ''"
         :min-width="item.S_NAME==='AW_LINE' ? '120' : ''"
         show-overflow-tooltip>
+      </el-table-column>
+      <el-table-column label="操作" width="262">
+        <template slot-scope="scope">
+          <el-button size="mini" type="info" @click="detailWorkOrder(scope.row)">详情</el-button>
+          <el-button size="mini" type="warning" @click="writeInfo(scope.row)">写入制令</el-button>
+          <el-button size="mini" type="primary" @click="jumpTo(scope.row)" :disabled="scope.row.AW_STATUS === 0 ? false : true">{{scope.row.AW_STATUS === 0?'开始生产':'生产完成'}}</el-button>
+        </template>
       </el-table-column>
     </el-table>
     <!-- 上下按钮 -->
@@ -101,8 +102,6 @@ export default {
       endDate: '',
       // 匹配工单的值
       inputVal: '',
-      // 当前行信息
-      currentRow: null,
       // 上移，下移按钮是否禁用
       moveTop: true,
       moveBottom: false,
@@ -156,16 +155,16 @@ export default {
   methods: {
     getWorkList(time, isNew) {
       const userName = localStorage.getItem('userName')
-      axios.get(this.httpUrl + 'MES/GetTitle?page=APS_WORKER_SIMPLE')
-      // axios.get(' http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/getApsWorkerTitle')
+      // axios.get(this.httpUrl + 'MES/GetTitle?page=APS_WORKER_SIMPLE')
+      axios.get(' http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/getApsWorkerTitle')
       .then((res) => {
         // console.log(res)
         this.columns = res.data
       })
       .catch(err => err)
       // console.log(userName)
-      // axios.get(' http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/GetApsWorker')
-      axios.get(this.httpUrl + 'MES/GetApsWorkerQ?machine=' + userName + '&time=' + this.startDate + '&EndTime=' +this.endDate)
+      axios.get(' http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/GetApsWorker')
+      // axios.get(this.httpUrl + 'MES/GetApsWorkerQ?machine=' + userName + '&time=' + this.startDate + '&EndTime=' +this.endDate)
       .then((res) => {
         // console.log(res)
         let datas = res.data
@@ -185,7 +184,6 @@ export default {
       })
     },
     jumpTo(row) {
-      if(this.currentRow === null) return this.$message.warning('请先选择工单')
       // 之前是否有未完成工单，有则不允许下一步
       axios.post(this.httpUrl + 'MES/WorkerExamine', {PLAN_DATE: row.PLAN_DATE})
       .then(res => {
@@ -214,7 +212,6 @@ export default {
       }).catch(err => err)
     },
     writeInfo(row) {
-      if(this.currentRow === null) return this.$message.warning('请先选择工单')
        // 获取缓存中设备名,是否林全设备
       const company = localStorage.getItem('company')
        // 工单号传参
@@ -252,7 +249,6 @@ export default {
       }
     },
     detailWorkOrder(row) {
-      if(this.currentRow === null) return this.$message.warning('请先选择工单')
       // console.log(this.columnsAll)
       for(let i = 0; i < this.columnsAll.length; i++) {
         // console.log(this.columnsAll[i].S_NAME)
@@ -303,11 +299,8 @@ export default {
       // this.tableData = searchData
     },
     formateDate(row) {
-      // console.log(row)
+      console.log(row)
       return row.AW_PLAN_DATETIME.substr(0, 10)
-    },
-    handleCurrentChange(currentRow) {
-      this.currentRow = currentRow
     }
   }
 }
@@ -331,10 +324,6 @@ export default {
 }
 .btn_group{
   margin-left: 10px;
-}
-.btnwrap{
-  margin-bottom: 20px;
-  text-align: right;
 }
 @media screen and (max-width: 1100px) {
   .el-table{

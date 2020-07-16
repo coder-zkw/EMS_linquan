@@ -8,23 +8,18 @@
             <el-form class="form-login" :rules="rules" ref="form" :model="form">
                 <h2 class="form-title">用 户 登 录</h2>
                 <el-form-item prop="userName">
-                    <el-select v-model="form.userName" @change="handleChangeFocus" placeholder="请选择设备">
+                    <el-select v-model="form.userName" placeholder="请选择设备">
                         <i slot="prefix" class="iconTitle el-icon-s-platform"></i>
                         <el-option v-for="(item,i) in equipmentsList" :key="i" :label="item.BM_NAME" :value="item.BM_NAME"></el-option>
                     </el-select>
                     <el-button size="mini" v-show="isShow" plain class="changeEquip" @click="ChangeEquip">重新选择设备</el-button>
                 </el-form-item>
                 <el-form-item prop="operator">
-                    <el-select v-model="form.operator" @change="handleChangeFocus" placeholder="请选择操作">
-                        <i slot="prefix" class="iconTitle el-icon-s-order"></i>
-                        <el-option v-if="isKeyboard" label="生产" value="0"></el-option>
-                        <el-option label="调机" value="1"></el-option>
-                        <el-option v-if="!isKeyboard" label="品检" value="2"></el-option>
-                        <el-option v-if="!isKeyboard" label="审核" value="3"></el-option>
-                    </el-select>
-                </el-form-item>
-                <el-form-item prop="jobNum" class="clearMargin">
-                    <el-input v-model="form.jobNum" v-focus ref="inputSao" @keyup.enter.native="scanLogin()" placeholder="请扫码登录">
+                    <!-- <el-select v-model="form.operator" placeholder="请选择操作员">
+                        <i slot="prefix" class="iconTitle el-icon-user"></i>
+                        <el-option v-for="(item,i) in operators" :key="i" :label="item.S_NAME" :value="item.S_NAME"></el-option>
+                    </el-select> -->
+                    <el-input v-model="form.operator" v-focus placeholder="请扫码选择操作员">
                         <i slot="prefix" class="iconTitle el-icon-user"></i>
                     </el-input>
                     <el-button 
@@ -34,45 +29,78 @@
                         circle 
                         type="primary" 
                         icon="el-icon-mobile-phone"
-                        @click="handleSaoma('jobNum')">
+                        @click="handleSaoma('operator')">
                     </el-button>
+                </el-form-item>
+                <el-form-item prop="password" class="clearMargin">
+                    <el-input 
+                        ref="inputRef"
+                        v-model="form.password" 
+                        type="password" 
+                        placeholder="请输入密码"
+                        @keyup.enter.native="submitForm">
+                        <i slot="prefix" class="iconTitle el-icon-lock"></i>
+                        <el-button 
+                            v-if="isKeyboard"
+                            slot="suffix" 
+                            size="mini" 
+                            type="primary" 
+                            circle 
+                            class="el-icon-c-scale-to-original"
+                            @click="show"
+                            data-layout="normal">
+                        </el-button>
+                    </el-input>
                 </el-form-item>
                 <el-form-item prop="remember" class="clearMargin">
                     <el-checkbox label="记住设备名" v-model="remember" disabled></el-checkbox>
                 </el-form-item>
+                <el-form-item class="btn_wrap">
+                    <el-button type="primary" @click="submitForm">登 录</el-button>
+                    <!-- <el-button type="info" @click="cancel">取 消</el-button> -->
+                </el-form-item>
             </el-form>
         </div>
-        <scan-frame v-show="scanShow" ref="scan" @getScan="getScan" @closeScan="closeScan"></scan-frame>
+        <vue-touch-keyboard 
+            :options="options"
+            v-if="visible"
+            :layout="layout"
+            :cancel="hide"
+            :accept="accept"
+            :input="input">
+        </vue-touch-keyboard>
     </div>
 </template>
 <script>
 import Vue from 'vue'
 import axios from 'axios'
-import ScanFrame from '../utils/ScanFrame'
+import VueTouchKeyboard from 'vue-touch-keyboard'
+import style from 'vue-touch-keyboard/dist/vue-touch-keyboard.css'
+
+Vue.use(VueTouchKeyboard)
 
 export default {
-    components: { ScanFrame },
     data() {
         return {
-            // equipmentsList: [{BM_NAME: 'machine02'},{BM_NAME: 'machine03'}],
             equipmentsList: [],
+            operators: [],
             // 获取是否林全设备信息保留数据
             isDataLQ: [],
             form: {
                 userName: '',
-                operator: localStorage.getItem('author') || '',
-                jobNum: ''
+                operator: '',
+                password: ''
             },
-            // 扫码后返回员工工号和姓名保留，待登录校验用
-            rootNum: '',
-            staff: '',
             // 表单前端校验
             rules: {
                 userName: [
                     {required: true, message: '请选择设备！', tigger: 'blur'}
                 ],
                 operator: [
-                    {required: true, message: '请选择操作项！', tigger: 'blur'}
+                    {required: true, message: '操作员不能为空！', tigger: 'blur'}
+                ],
+                password: [
+                    {required: true, message: '密码不能为空！', tigger: 'blur'}
                 ]
             },
             // 是否记住设备名
@@ -80,35 +108,37 @@ export default {
             // 重新选择设备显示隐藏
             isShow: false,
             equipmentsOnline: [],
-            // 扫描框显示隐藏切换
-            scanShow: false
+            // 调用键盘参数
+            isKeyboard: true,
+            visible: false,
+            layout: "normal",
+            input: null,
+            options: {
+                useKbEvents: false,
+                preventClickEvent: false
+            }
         }
     },
     created() {
-        // 获取设备类型
-        this.getOpenType()
         // 获取在线设备数组(要先在下面的return前获取到)
         this.getEquipmentOnline()
         // 获取设备名,操作员列表
         this.getEquipments()
+        this.getOpenType()
     },
     activated() {
         // 扫码后返回页面更改可扫码框的值
-        // const result = this.$store.state.scanItems
-        // result.map(item => {
-        //     if(item.name === 'jobNum') {
-        //         // 获取扫码结果
-        //         this.form.jobNum = item.value
-        //         return
-        //     }
-        // })
-        // if(this.form.jobNum != '') {
-        //     // ipad扫码后有值，则发送请求解码出工号和姓名
-        //     this.scanLogin()
-        // }
+        const result = this.$store.state.scanItems
+        result.map(item => {
+            if(item.name === 'operator') {
+                this.form.operator = item.value
+                return
+            }
+        })
     },
     methods: {
         getEquipmentOnline() {
+            // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/server/getOnline')
             axios.get(this.killBrowserUrl + 'server/getOnline')
             .then((res) => {
                 // console.log(res)
@@ -119,9 +149,9 @@ export default {
             // 模拟有在线机台，用于测试
             // this.equipmentsOnline = [{name: 'machine02'},{name: 'machine03'}]
         },
-        // 登录校验工号是否通过
+        // 登录校验用户名和密码
         submitForm() {
-            const {userName, operator, jobNum} = this.form
+            const {userName, operator, password} = this.form
             this.$refs.form.validate(valid => {
                 if(valid) {
                     // 判断已连接设备中是否当前设备
@@ -130,43 +160,51 @@ export default {
                         this.$message.error('当前机台未连接，请先上线')
                         return
                     }
-                    
-                    if(jobNum === this.rootNum) { //当前扫码框的值等于扫码后保留工号，才可成功登录
-                        // 如果用户勾选了记住设备名则将用户名缓存
-                        if(this.remember) {
-                            localStorage.setItem('userName', userName)
-                            const isUser = this.isDataLQ.find(item => item.BM_NAME === userName)
-                            // 缓存是否林全公司机台
-                            localStorage.setItem('company', isUser.BM_LQ)
-                            // 缓存员工工号和姓名
-                            localStorage.setItem('jobNum', jobNum)
-                            localStorage.setItem('operator', this.staff)
+                    // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/GetRecord')
+                    axios.get(this.httpUrl + 'MES/GetLogin?u=' + operator + '&p=' + password)
+                    .then((res) => {
+                        // console.log(res)
+                        // if(res.status === 200 && res.data.data === 'success') {
+                        if(res.status === 200 && res.data === 'success') {
+                            // 如果用户勾选了记住设备名则将用户名缓存
+                            if(this.remember) {
+                                localStorage.setItem('userName', userName)
+                                const isUser = this.isDataLQ.find(item => item.BM_NAME === userName)
+                                localStorage.setItem('company', isUser.BM_LQ)
+                                localStorage.setItem('operator', operator)
+                            }
+                            // 权限为0，跳至开始生产的工单页面，否则跳至调机、首末检的工单页面
+                            const currentOperator = this.operators.find(item => item.S_NAME === this.form.operator)
+                            const author = currentOperator.S_AUTHOR
+                            // 当前操作员权限存入缓存
+                            localStorage.setItem('author', author)
+                            // 获取缓存中的isKeyboard,判断是电脑还是移动环境
+                            const isPc = localStorage.getItem('isKeyboard')
+                            // 若权限为2且电脑环境，跳至生产工单页面
+                            if(author === '0' || (isPc==='true' && author === '2')){
+                                this.$router.push('/home/work_order')
+                            }else if(author === '3') { //权限为3，品检审核页面
+                                this.$router.push('/home/audit')
+                            }else{
+                                this.$router.push('/home/work_order2')
+                            }
+                            // 加了keep-alive,返回此页面需要密码清空
+                            this.form.password = ''
+                        }else{
+                            this.$message.error('密码错误！请重新输入')
                         }
-                        // 页面离开时清空登录用户名
-                        this.emptyDatas()
-                        // 权限为0，跳至开始生产的工单页面，否则跳至调机、首末检的工单页面
-                        const author = operator
-                        // 当前操作权限存入缓存
-                        localStorage.setItem('author', author)
-                        // 权限0，跳至生产工单页面
-                        if(author === '0'){
-                            this.$router.push('/home/work_order')
-                        }else if(author === '3') { //权限为3，品检审核页面
-                            this.$router.push('/home/audit')
-                        }else if(author === '1'){
-                            this.$router.push('/home/work_order2')
-                        }else if(author === '2'){
-                            this.$router.push('/home/examworks')
-                        }
-                    }else{
-                        this.$message.error('该用户不存在！请重新输入')
-                    }
+                    }).catch(err => err)
                 }
             })
+        },
+        // 重置
+        cancel() {
+            this.$refs.form.resetFields()
         },
         // 获取设备名称
         getEquipments() {
             // 获取缓存中的设备名
+            // localStorage.setItem('userName', 'machine03')
             const userName = localStorage.getItem('userName')
             // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/GetUser')
             axios.get(this.httpUrl + 'MES/GetUser')
@@ -174,41 +212,15 @@ export default {
                 // 此设备数据保留，待获取是否林全机台用
                 this.isDataLQ = res.data.machine
                 // console.log(res)
+                this.operators = res.data.user
                 if(userName != null) {
                     this.form.userName = userName
                     // 有缓存，显示重新获取设备按钮，此时不获取设备列表直接return出去
                     this.isShow = true
                     return
                 }
-                // 无缓存，则设备信息渲染用
+                // 设备信息渲染用
                 this.equipmentsList = res.data.machine
-            }).catch(err => err)
-        },
-        // 扫码登录
-        scanLogin() {
-            const value = this.form.jobNum.trim()
-            if(value === '') {
-                this.$message.error('扫描结果为空！')
-                return
-            }
-            // 发送扫码结果到后台验证是否通过，并返回工号和姓名
-            axios.get(this.httpUrl + 'MES/GetLogin?uid='+value)
-            .then(res => {
-                // console.log(res)
-                if(res.data.code === 200) {
-                    const result = res.data.data[0]
-                    if(result.STATUS === '0') {
-                        this.form.jobNum = result.EMP_NO
-                        this.rootNum = result.EMP_NO
-                        this.staff = result.EMP_NAME
-                        // 扫码直接判断是否登录
-                        this.submitForm()
-                    }else{
-                        this.$message.error('该用户不存在！')
-                    }
-                }else{
-                    this.$message.error('判断用户是否存在失败！请重试')
-                }
             }).catch(err => err)
         },
         // 重新选择设备
@@ -219,40 +231,25 @@ export default {
             localStorage.removeItem('operator')
             location.reload()
         },
-        emptyDatas() {
-            // 清空store中的jobNum
-            this.form.jobNum = ''
-            this.$store.dispatch('handleEmptyScanItems', '')
-        },
-        // 下拉框选择后，扫码框一直聚焦
-        handleChangeFocus() {
-            // 更改当前操作权限存入缓存
-            this.$nextTick(() => {
-                this.$refs.inputSao.focus()
-            })
-        },
         handleSaoma(item) {
-            // this.$router.push('/device?name='+item)
-            this.scanShow = true
-            // 开启扫描框后，触发子组件的开始扫描方法
-            this.$nextTick(() => {
-                this.$refs.scan.handleScan()
-            })
-        },
-        getScan(value) {
-            this.form.jobNum = value
-            this.scanLogin()
-            // this.$nextTick(() => {
-            //     this.scanShow = false
-            // })
-        },
-        closeScan() {
-            this.scanShow = false
+            this.$router.push('/device?name='+item)
         },
         update() {
             window.location.href = this.httpUrl+'app/appLinQuan.apk'
         },
-        // 判断运行环境
+        show(e) {
+            this.input = this.$refs.inputRef.$refs.input
+            // this.layout = e.target.dataset.layout
+            if (!this.visible)
+                this.visible = true
+        },
+        accept(text) {
+            //   console.log(text);    
+            this.hide();
+        },
+        hide() {
+            this.visible = false;
+        },
         getOpenType() {
             let sUserAgent = navigator.userAgent.toLowerCase();
             let bIsIpad = sUserAgent.match(/ipad/i) == "ipad";//判断是否为iPad
@@ -271,7 +268,6 @@ export default {
             }else{
                 // console.log("当前是手机打开")
                 this.isKeyboard = false
-                // this.operator = '2'
                 localStorage.setItem('isKeyboard', false)
             }
         }

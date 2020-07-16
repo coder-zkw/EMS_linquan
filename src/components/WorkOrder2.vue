@@ -1,11 +1,12 @@
 <template>
   <div class="WorkerOrder">
     <div class="el-page-header">
-      <div class="el-page-header__left">
+      <!-- <div class="el-page-header__left">
         <i class="el-icon-s-home"></i>
         <div class="el-page-header__title">首页</div>
       </div>
-      <div class="el-page-header__content">工单列表</div>
+      <div class="el-page-header__content">工单列表</div> -->
+      <el-page-header @back="$router.back()" content="工单列表"></el-page-header>
       <div class="exitBut">
         <el-date-picker
           size="small"
@@ -31,10 +32,9 @@
     </div>
     <div class="btnwrap">
       <el-button type="info" size="small" @click="detailWorkOrder(currentRow)">查看详情</el-button>
-      <el-button type="success" size="small" :disabled="isTuneStart" v-if="isShowTune" @click="tuningCheck">开始调机</el-button>
-      <el-button type="primary" size="small" :disabled="isMaterial" v-if="isShowTune" @click="verification(currentRow)">条码验证</el-button>
-      <el-button type="danger" size="small" :disabled="isTuneEnd" v-if="isShowTune" @click="tuningEnd">结束调机</el-button>
-      <el-button type="warning" size="small" v-if="isShowExamine" @click="toExamine">首/末/巡检</el-button>
+      <el-button type="success" size="small" :disabled="isTuneStart" @click="getReasons">开始调机</el-button>
+      <el-button type="primary" size="small" :disabled="isMaterial" @click="verification(currentRow)">条码验证</el-button>
+      <el-button type="danger" size="small" :disabled="isTuneEnd" @click="tuningEnd">结束调机</el-button>
     </div>
     <!-- 工单列表 -->
     <el-table
@@ -56,7 +56,7 @@
       </el-table-column>
     </el-table>
     <!-- 上下按钮 -->
-    <el-row class="moveBit" v-if="isMoveButton">
+    <el-row class="moveBit" v-if="isMoveButton" v-show="isSee">
       <el-button icon="el-icon-bottom" plain circle :disabled="moveBottom" @click="moveing(360)"></el-button>
       <el-button icon="el-icon-top" plain circle :disabled="moveTop" @click="moveing(-360)"></el-button>
     </el-row>
@@ -73,6 +73,20 @@
           <span>{{detailData[i]}}</span>
       </el-col>
       </el-row>
+    </el-dialog>
+    <!-- 调机原因选择弹出框 -->
+    <el-dialog
+      title="调机原因"
+      :visible.sync="dialogReasonVisible"
+      @close="dialogClosed"
+      width="60%">
+      <div class="block">请选择调机原因：
+        <el-cascader v-model="reasonVal" :options="reasonOpt"></el-cascader>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="dialogReasonVisible = false">取 消</el-button>
+        <el-button type="primary" @click="tuningCheck">确 定</el-button>
+      </span>
     </el-dialog>
   </div>
 </template>
@@ -111,7 +125,8 @@ export default {
       // 表格高度
       tableHeight: 0,
       // 是否显示移动按钮
-      isMoveButton: true,
+      isMoveButton: false,
+      isSee: localStorage.getItem('isKeyboard') === 'true',
       // 当前行信息
       currentRow: null,
       // 查找工单的值
@@ -119,16 +134,16 @@ export default {
       userName: localStorage.getItem('userName'),
       company: localStorage.getItem('company'),
       operator: localStorage.getItem('operator'),
-      isFull: false,
-      isfullScreen: false,
+      // 调机原因弹出框
+      dialogReasonVisible: false,
+      reasonVal: '',
+      // 调机原因数据
+      reasonOpt: [],
       // 开始、结束调机禁用切换
       isTuneStart: true,
       // 条码验证按钮禁用切换
       isMaterial: true,
       isTuneEnd: true,
-      // 按钮显示隐藏切换
-      isShowTune: localStorage.getItem('author') === '1' ? true : false,
-      isShowExamine: localStorage.getItem('author') === '2' ? true : false
     }
   },
   // currentdata: null,
@@ -184,11 +199,19 @@ export default {
       // axios.get(' http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/GetApsWorker')
        axios.get(this.httpUrl + 'MES/GetApsWorkerQ?machine=' + this.userName + '&time=' + this.startDate + '&EndTime=' +this.endDate)
       .then((res) => {
-        let datas = res.data
-        if (this.inputVal != '') {
-          this.tableData = datas.filter(item => (item.AW_APS_WORKER.indexOf(this.inputVal) != -1))
+        if(res.status === 200) {
+          let datas = res.data
+          if(datas.length === 0) {
+            return this.$message.warning('查询数据数为0')
+          }
+          // 工单匹配有值则过滤查询的数据
+          if (this.inputVal != '') {
+            this.tableData = datas.filter(item => (item.AW_APS_WORKER.indexOf(this.inputVal) != -1))
+          }else{
+            this.tableData = datas
+          }
         }else{
-          this.tableData = datas
+          this.$message.error('获取调机y数据失败！')
         }
       })
       .catch(err => err)
@@ -249,8 +272,53 @@ export default {
       // 传0验证当前工单是否已开始调机
       this.setStartTime(0)
     },
+    getReasons() {
+      // 先清空上次的数据
+      this.reasonOpt = []
+      axios.get(this.httpUrl + 'MES/GetTuneNg')
+      .then(res => {
+        // console.log(res)
+        if(res.data.code === 200) {
+          const datas = res.data.data
+          const obj = {}
+          // 把获取的数据进行归类处理成一个对象
+          datas.map(item => {
+            if(!obj[item.F_ITEMCODE]) {
+              obj[item.F_ITEMCODE] = [item.F_ITEMNAME]
+            }else{
+              obj[item.F_ITEMCODE].push(item.F_ITEMNAME)
+            }
+          })
+          // 把归类后的对象处理成渲染二级列表所需的对象格式
+          for(let key in obj) {
+            let o = {}
+            o.label = key+'类'
+            o.value = key
+            o.children = []
+            obj[key].map(item => {
+              o.children.push({
+                label: item,
+                value: item
+              })
+            })
+            this.reasonOpt.push(o)
+          }
+          // console.log(this.reasonOpt)
+        }else{
+          this.$message.error('获取调机原因列表失败！')
+        }
+      }).catch(err => err)
+      // 调机原因弹出框弹出进行选择操作
+      this.dialogReasonVisible = true
+    },
     // 验证机台是否运行中，未运行才可开始调机
     tuningCheck() {
+      if(this.reasonVal === '') {
+        this.$message.error('请选择调机原因！')
+        return
+      }
+      // 调机原因弹出框关闭
+      this.dialogReasonVisible = false
       // 非林全机台直接开始调机
       if(this.company === 1) {
           return this.tuningStart()
@@ -335,8 +403,11 @@ export default {
         const MT_MACHINE = this.userName
         const MT_DOUSER = this.operator
         const MT_STARTTIME = (time === 0 ? '' : getCurrentTime(new Date()))
+        // 调机原因
+        const F_ITEMCODE = this.reasonVal[0]
+        const F_ITEMNAME = this.reasonVal[1]
         // 开始调机，开始时间传后台
-        axios.post(this.httpUrl + 'MES/Tune', {MT_WORKER,MT_PRODUCT_HALF,MT_MACHINE,MT_DOUSER,MT_STARTTIME})
+        axios.post(this.httpUrl + 'MES/Tune', {MT_WORKER,MT_PRODUCT_HALF,MT_MACHINE,MT_DOUSER,MT_STARTTIME,F_ITEMCODE,F_ITEMNAME})
         .then((res) => {
             // console.log(res)
             if(res.data.code === 200) {
@@ -361,11 +432,6 @@ export default {
                   }else{
                     // 提示有未结束的调机工单
                     this.isTuneOver(work, machine, product)
-                    // this.$message({
-                    //   type: 'error',
-                    //   message: machine+' 有未结束调机的工单：'+ work,
-                    //   duration: 1500
-                    // })
                     this.isTuneEnd = true
                   }
                 }
@@ -391,7 +457,7 @@ export default {
         cancelButtonText: '否',
         type: 'warning'
       }).then(() => {
-        this.tuningEnd( null,work, machine, product)
+        this.tuningEnd(null, work, machine, product)
       }).catch(err => err)
     },
     // 条码验证
@@ -419,7 +485,7 @@ export default {
             // console.log(res)
             // 写入失败，提示手动输入
             if(res.data.code != 200) {
-              this.$message.error('制令信息写入失败！请在机台手动输入。')
+              this.$message.error('未找到'+work_Id+'制令信息！请在机台手动输入。')
             }
           }).catch(() => this.$message.error('制令信息写入失败！请在机台手动输入。'))
         }
@@ -448,13 +514,6 @@ export default {
         // 跳至物料验证页面
         this.$router.push('/home/materials_1?isCheck='+SW_CHECK+'&work='+AW_APS_WORKER+'&product='+AW_PRODUCT_HALF)
       }
-    },
-    toExamine() {
-      if(this.currentRow === null) {
-        return this.$message.error('请先选择制令单号！')
-      }
-      const {AW_APS_WORKER, AW_PRODUCT_HALF, AW_PLAN_DATE} = this.currentRow
-      this.$router.push('/home/examine?work='+AW_APS_WORKER+'&product='+AW_PRODUCT_HALF+'&date='+AW_PLAN_DATE)
     },
     workSearch(value) {
       this.inputVal = value

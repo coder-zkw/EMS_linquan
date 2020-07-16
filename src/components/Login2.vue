@@ -116,7 +116,6 @@ export default {
     },
     methods: {
         getEquipmentOnline() {
-            // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/server/getOnline')
             axios.get(this.killBrowserUrl + 'server/getOnline')
             .then((res) => {
                 // console.log(res)

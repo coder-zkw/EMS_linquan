@@ -2,65 +2,63 @@
     <div class="examine">
         <el-page-header @back="goBack" content="品检表单"></el-page-header>
         <el-card>
-            <el-form ref="form" :model="form" label-width="76px">
+            <el-form ref="form" :model="form" label-width="72px">
                 <el-row :gutter="12">
-                    <el-col :span="8" >
+                    <el-col :span="4" >
                         <el-form-item label="品检员：">
                             <el-input size="mini" :value="form.workId" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="8" >
+                    <el-col :span="4" >
                         <el-form-item label="计划日期：">
                             <el-input size="mini" :value="form.datePlan" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="8" >
+                    <el-col :span="4" >
                         <el-form-item label="机台：">
                             <el-input size="mini" :value="form.machine" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="8" >
+                    <el-col :span="4" >
                         <el-form-item label="制令：">
                             <el-input size="mini" :value="form.orderVal" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="8" >
+                    <el-col :span="4" >
                         <el-form-item label="成品编号：">
                             <el-input size="mini" :value="form.productNum" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="8" >
+                    <el-col :span="4" >
                         <el-form-item label="成品名称：">
                             <el-input size="mini" :value="form.productName" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="16" >
+                    <el-col :span="8" >
                         <el-form-item label="成品规格：">
                             <el-input size="mini" :value="form.productType" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="8" >
+                    <el-col :span="4" >
                         <el-form-item label="客户编号：">
                             <el-input size="mini" :value="form.client" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="8" >
+                    <el-col :span="4" >
                         <el-form-item label="图纸日期：">
                             <el-input size="mini" :value="form.dateDraw" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="8" >
+                    <el-col :span="4" >
                         <el-form-item label="图纸版次：">
                             <el-input size="mini" :value="form.versionDraw" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="8" >
-                        <el-form-item label="图纸信息：">
-                            <el-button size="mini" type="primary" @click="showDraw">查看图纸</el-button>
+                    <el-col :span="4" >
+                        <el-form-item>
+                            <el-button size="mini" type="primary">查看图纸</el-button>
                         </el-form-item>
                     </el-col>
-                </el-row>
-                <el-row :gutter="12">
                     <el-col :span="8" >
                         <el-form-item label="工序序号：">
                             <el-select v-model="form.processNum" @change="processChange" size="mini" placeholder="请选择">
@@ -86,7 +84,10 @@
                         <el-form-item label="实物编号：" prop="identifier" :rules="{required: true, message: '实物编号不能为空'}">
                             <el-input size="mini" v-model="form.identifier"></el-input>
                             <el-button 
-                                class="saoma" 
+                                class="saoma"
+                                size="mini" 
+                                circle 
+                                plain
                                 type="primary" 
                                 icon="el-icon-mobile-phone"
                                 @click="handleSaoma('identifier')">
@@ -102,9 +103,9 @@
             </el-form>
         </el-card>
         <el-table :data="tableData" ref="examineRef" size="mini" border style="width: 100%">
-            <!-- <el-table-column type="index" width="40"></el-table-column> -->
+            <el-table-column type="index" width="40"></el-table-column>
             <el-table-column prop="CATE_NAME" label="品检类别"></el-table-column>
-            <el-table-column prop="QC_ITEM" label="品检项目" show-overflow-tooltip></el-table-column>
+            <el-table-column prop="QC_ITEM" label="品检项目"></el-table-column>
             <el-table-column prop="WL_SPEC" label="规格" show-overflow-tooltip></el-table-column>
             <el-table-column prop="QC_REMARK" label="品检备注" width="100"></el-table-column>
             <el-table-column prop="TOOL_NAME" label="判定工具" width="100"></el-table-column>
@@ -143,28 +144,24 @@
                 <el-radio v-model="resExamine" label="Y" :disabled="true">通过</el-radio>
                 <el-radio v-model="resExamine" label="N" :disabled="true">不通过</el-radio>
             </template>
-            <el-button size="small" type="success" :disabled="isAllCheck" @click="resultSubmit">提交</el-button>
+            <el-button size="mini" type="success" :disabled="isAllCheck" @click="resultSubmit">提交</el-button>
         </div>
-        <!-- 扫码控件 -->
-        <scan-frame v-show="scanShow" ref="scan" @getScan="getScan" @closeScan="closeScan"></scan-frame>
     </div>
 </template>
 <script>
 import getCurrentTime from '../utils/currentTime'
-import ScanFrame from '../utils/ScanFrame'
 import axios from 'axios'
 
 export default {
-    components: { ScanFrame },
     data() {
         return {
-            // userName: localStorage.getItem('userName'),
+            userName: localStorage.getItem('userName'),
             // 品检数据列表
             tableData: [],
             form: {
                 workId: localStorage.getItem('operator'),
                 datePlan: this.$route.query.date,
-                machine: this.$route.query.machine,
+                machine: localStorage.getItem('userName'),
                 orderVal: this.$route.query.work,
                 productNum: '',
                 productName: '',
@@ -186,12 +183,20 @@ export default {
             // 品检最终是否通过结果
             resExamine: 'N',
             timer: null,
-            isAllCheck: true,
-            scanShow: false
+            isAllCheck: true
         }
     },
     created() {
         this.getProductInfo()
+    },
+    // activated() {
+    //     // 扫码后返回页面更改可扫码框的值
+    //     console.log(123)
+    //     this.changeSaoInput()
+    // },
+    mounted() {
+        // console.log(123)
+        this.changeSaoInput()
     },
     methods: {
         getProductInfo(){
@@ -201,28 +206,14 @@ export default {
             .then(res => {
                 // console.log(res)
                 if(res.status === 200) {
-                    // 没有成品信息
-                    if(res.data.V_MES_PRODUCT.length === 0) {
-                        return this.open('此工单没有成品信息')
-                    }
                     const {ITEM_CODE, ITEM_NAME, ITEM_SPEC, CUST_CODE, CAD_DATE, CAD_VER} = res.data.V_MES_PRODUCT[0]
                     const processArr = res.data.v_mes_gongxu
-                    // this.form.productNum = ITEM_CODE === null ? '' : ITEM_CODE
-                    // this.form.productName = ITEM_NAME === null ? '' : ITEM_NAME
-                    // this.form.productType = ITEM_SPEC === null ? '' : ITEM_SPEC
-                    // this.form.client = CUST_CODE === null ? '' : CUST_CODE
-                    // this.form.dateDraw = CAD_DATE === null ? '' : CAD_DATE.replace(/-/g, '/')
-                    // this.form.versionDraw = CAD_VER === null ? '' : CAD_VER
                     this.form.productNum = ITEM_CODE
                     this.form.productName = ITEM_NAME
                     this.form.productType = ITEM_SPEC
                     this.form.client = CUST_CODE
                     this.form.dateDraw = CAD_DATE.replace(/-/g, '/')
                     this.form.versionDraw = CAD_VER
-                    // 没有成品工序
-                    if(processArr.length === 0) {
-                        return this.open('此工单没有工序信息')
-                    }
                     // 工序序号列表渲染
                     this.form.processData = processArr
                     // 默认工序序号、工序名称、工序描述选中第一道工序
@@ -262,7 +253,7 @@ export default {
                             }
                             break
                         case '大于等于':
-                            value = (INPUTVAL-0) >= (QC_VALUE-0) ? 'OK' : 'NG'
+                            value = INPUTVAL >= QC_VALUE ? 'OK' : 'NG'
                             break
                         case '介于等于':
                             const nums = QC_VALUE.split('-')
@@ -275,7 +266,7 @@ export default {
                 }
                 this.tableData[index].STATUS = value
                 this.isAllExamine()
-            }, 600)
+            }, 700)
         },
         isAllExamine() {
             // console.log(this.tableData)
@@ -331,7 +322,7 @@ export default {
         },
         resultSubmit() {
             let formData = {}
-            formData.QP_USERID = this.form.workId
+            formData.QP_USERID = this.userName
             formData.QP_WORKER = this.form.orderVal
             formData.QP_PLAN_DATE = this.form.datePlan
             formData.QP_MACHINE = this.form.machine
@@ -356,7 +347,7 @@ export default {
                         if(res.status === 200){
                             this.$message.success('品检结果保存成功！')
                             // 返回工单列表
-                            this.$router.replace('/home/examworks')
+                            this.$router.replace('/home/work_order2')
                         }else {
                             this.$message.error('品检结果保存失败！请重试')
                         }
@@ -366,28 +357,32 @@ export default {
                 }
             })
         },
+        querySearch(queryString, cb) {
+            var restaurants = this.form.optionsOrder
+            var results = queryString ? restaurants.filter(this.createFilter(queryString)) : restaurants
+            // 调用 callback 返回建议列表的数据
+            cb(results)
+        },
+        createFilter(queryString) {
+            return (restaurant) => {
+            return (restaurant.value.toLowerCase().indexOf(queryString.toLowerCase()) != -1)
+            }
+        },
         handleSaoma(item) {
             // console.log(item)
-            // this.$router.push('/device?name='+item)
-            this.scanShow = true
-            // 开启扫描框后，触发子组件的开始扫描方法
-            this.$nextTick(() => {
-                this.$refs.scan.handleScan()
+            this.$router.push('/device?name='+item)
+            // this.$store.dispatch('handleChangeScanItems', {name: item, value: '123'})
+            // console.log(this.$store.state.scanItems)
+        },
+        changeSaoInput() {
+            const result = this.$store.state.scanItems
+            result.map(item => {
+                // this[item.name] = item.value
+                if(item.name === 'identifier') {
+                    this.form.identifier = item.value
+                    return
+                }
             })
-        },
-        getScan(value) {
-            this.form.identifier = value
-        },
-        closeScan() {
-            this.scanShow = false
-        },
-        open(content) {
-            this.$alert('', content, {
-                confirmButtonText: '确定'
-            })
-        },
-        showDraw() {
-            // console.log(111)
         }
     }
 }
@@ -412,10 +407,10 @@ export default {
     padding-right: 2px;
 }
 .el-form-item{
-    margin-bottom: 0;
+    margin-bottom: 2px;
 }
 /deep/ .el-input__inner{
-    padding: 0 3px;
+    padding: 0 6px;
 }
 .margin-top{
     margin-top: 5px;
@@ -425,7 +420,7 @@ export default {
     padding-right: 5px;
 }
 /deep/ .el-table .el-input__inner{
-    padding: 0 3px;
+    padding: 0 5px;
 }
 /deep/ .el-autocomplete-suggestion li{
     padding: 0 15px;
@@ -441,17 +436,10 @@ export default {
 .el-radio{
     color: #fff;
 }
-/deep/ .is-checked .el-radio__input.is-disabled+span.el-radio__label{
-    color: #409EFF;
-}
-/deep/ .is-checked .el-radio__input.is-disabled .el-radio__inner{
-    background-color: #409EFF;
-    border-color: #409EFF;
- }
 .btnwrap{
     width: 100%;
     height: 40px;
-    line-height: 38px;
+    line-height: 40px;
     text-align: center;
     background: gray;
     color: #fff;
@@ -462,10 +450,7 @@ export default {
 }
 .saoma{
     position: absolute;
-    right: 0;
+    right: -30px;
     top: 7px;
-}
-.margin-top .el-button{
-    padding: 5px 10px;
 }
 </style>

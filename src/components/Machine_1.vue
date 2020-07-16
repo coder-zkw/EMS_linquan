@@ -77,9 +77,7 @@ export default {
             setdialogVisible: false,
             selectVal: '1',
             // 计数
-            count: 0,
-            isFull: false,
-            isfullScreen: false
+            count: 0
         }
     },
     created() {

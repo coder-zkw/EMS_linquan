@@ -2,18 +2,20 @@ import Vue from 'vue'
 import VueRouter from 'vue-router'
 import Login from '../components/Login'
 import Home from '../components/Home'
+import Command from '../components/Command'
 import WorkOrder from '../components/WorkOrder'
 import WorkOrder2 from '../components/WorkOrder2'
+import ExamineWorks from '../components/ExamineWorks'
 import Materials from '../components/Materials'
 import Materials1 from '../components/Materials_1'
 import Machine1 from '../components/Machine_1'
-import Tuning from '../components/Tuning'
+// import Tuning from '../components/Tuning'
 import Examine from '../components/Examine'
 import Setting from '../components/Set'
 import Device from '../components/Device'
 import Audit from '../components/Audit'
-import Gantt from '../components/Gantt.vue'
-import Table from '../components/Table'
+// import Gantt from '../components/Gantt.vue'
+// import Table from '../components/Table'
 
 
 Vue.use(VueRouter)
@@ -32,12 +34,20 @@ const routes = [
         component: Home,
         children: [
             {
+                path: '/home/command',
+                component: Command
+            },
+            {
                 path: '/home/work_order',
                 component: WorkOrder
             },
             {
                 path: '/home/work_order2',
                 component: WorkOrder2
+            },
+            {
+                path: '/home/examworks',
+                component: ExamineWorks
             },
             {
                 path: '/home/materials',
@@ -65,18 +75,18 @@ const routes = [
         path: '/device',
         component: Device
     },
-    {
-        path: '/gantt',
-        component: Gantt
-    },
+    // {
+    //     path: '/gantt',
+    //     component: Gantt
+    // },
     {
         path: '/setexamine',
         component: Setting
     },
-    {
-        path: '/table',
-        component: Table
-    }
+    // {
+    //     path: '/table',
+    //     component: Table
+    // }
 ]
 
 const router = new VueRouter({

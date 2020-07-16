@@ -8,7 +8,7 @@ const store = new Vuex.Store({
     currentOrderData: {},
     // 调机扫码结果
     res_scan: '',
-    // 首检可扫码项保存数组[{name: 'wire', value: '1234'},{name: 'number', value: '432'}]
+    // 首检可扫码项保存数组[{name: 'wire', value: '1234'},{name: 'identifier', value: '432'}]
     scanItems: []
   },
   mutations: {
