@@ -1,17 +1,17 @@
 <template>
   <div class="WorkerOrder">
     <div class="el-page-header">
-      <el-page-header @back="$router.back()" content="工单列表"></el-page-header>
+      <!-- <el-page-header @back="$router.back()" content="工单列表"></el-page-header> -->
       <div class="exitBut">
         <search-input @workSearch="workSearch"></search-input>
         <el-button plain size="small" @click="refreshData">
           <i class="el-icon-search"></i> 查询
         </el-button>
       </div>
-    </div>
-    <div class="btnwrap">
+    <!-- <div class="btnwrap"> -->
       <el-button type="info" size="small" @click="detailWorkOrder(currentRow)">查看详情</el-button>
       <el-button type="warning" size="small" @click="toExamine">首/中/末检</el-button>
+    <!-- </div> -->
     </div>
     <!-- 工单列表 -->
     <el-table
@@ -95,7 +95,9 @@ export default {
       workVal: '',
       userName: localStorage.getItem('userName'),
       operator: localStorage.getItem('operator'),
-      jobNum: localStorage.getItem('jobNum')
+      jobNum: localStorage.getItem('jobNum'),
+      // httpUrl: 'http://mes.cn:7777/imes/',
+      // killBrowserUrl: 'http://mes.cn:7777/smes/'
     }
   },
   // currentdata: null,
@@ -136,12 +138,12 @@ export default {
   methods: {
     getWorkList() {
       axios.get(this.httpUrl + 'MES/GetTitle?page=APS_WORKER_SIMPLE')
-      // axios.get(' http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/getApsWorkerTitle')
+      // axios.get('http://localhost:50814/MES/GetTitle?page=APS_WORKER_SIMPLE')
       .then((res) => {
         this.columns = res.data
       })
       .catch(err => err)
-      // axios.get(' http://mengxuegu.com:7300/mock/5ea245bd2a2f716419f892c5/GetApsWorker')
+      // axios.get('http://localhost:50814/MES/GetApsWorkerQc?u=' + '12102|徐贵凌')
        axios.get(this.httpUrl + 'MES/GetApsWorkerQc?u=' + this.jobNum+'|'+this.operator)
       .then((res) => {
         // console.log(res)
@@ -161,7 +163,7 @@ export default {
         }
       })
       .catch(err => err)
-      // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/getApsWorkerTitle')
+      // axios.get('http://localhost:50814/MES/GetTitle?page=APS_WORKER')
       axios.get(this.httpUrl + 'MES/GetTitle?page=APS_WORKER')
       .then((res) => {
         this.columnsAll = res.data
@@ -246,9 +248,12 @@ export default {
   display: inline-block;
   width: 100px;
 }
-.btn_group{
+.el-button{
   margin-left: 10px;
 }
+/* .btn_group{
+  margin-left: 10px;
+} */
 .btnwrap{
   margin-bottom: 20px;
   text-align: right;

@@ -1,6 +1,6 @@
 <template>
     <div class="examine">
-        <el-page-header @back="goBack" content="品检表单"></el-page-header>
+        <!-- <el-page-header @back="goBack" content="品检表单"></el-page-header> -->
         <el-card>
             <el-form ref="form" :model="form" label-width="76px">
                 <el-row :gutter="12">
@@ -82,7 +82,7 @@
                             <el-input size="mini" :value="form.processDesc" :disabled="true"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="8" class="margin-top">
+                    <!-- <el-col :span="8" class="margin-top">
                         <el-form-item label="实物编号：" prop="identifier" :rules="{required: true, message: '实物编号不能为空'}">
                             <el-input size="mini" v-model="form.identifier"></el-input>
                             <el-button 
@@ -92,17 +92,16 @@
                                 @click="handleSaoma('identifier')">
                             </el-button>
                         </el-form-item>
-                    </el-col>
+                    </el-col> -->
                     <el-col :span="16" >
-                        <el-form-item label="备注：">
-                            <el-input type="textarea" size="mini" :rows="1" v-model="remark"></el-input>
+                        <el-form-item label="备注：" prop="remark" :rules="{required: resExamine==='N', message: '不通过需备注原因'}">
+                            <el-input type="textarea" size="mini" :rows="1" v-model="form.remark"></el-input>
                         </el-form-item>
                     </el-col>
                 </el-row>
             </el-form>
         </el-card>
         <el-table :data="tableData" ref="examineRef" size="mini" border style="width: 100%">
-            <!-- <el-table-column type="index" width="40"></el-table-column> -->
             <el-table-column prop="CATE_NAME" label="品检类别"></el-table-column>
             <el-table-column prop="QC_ITEM" label="品检项目" show-overflow-tooltip></el-table-column>
             <el-table-column prop="WL_SPEC" label="规格" show-overflow-tooltip></el-table-column>
@@ -187,11 +186,15 @@ export default {
             resExamine: 'N',
             timer: null,
             isAllCheck: true,
-            scanShow: false
+            scanShow: false,
+            half_product: this.$route.query.product,
+            // httpUrl: 'http://mes.cn:7777/imes/',
+            // killBrowserUrl: 'http://mes.cn:7777/smes/'
         }
     },
     created() {
         this.getProductInfo()
+        // console.log(this.form.datePlan.replace(/\//g, '-'))
     },
     methods: {
         getProductInfo(){
@@ -207,18 +210,11 @@ export default {
                     }
                     const {ITEM_CODE, ITEM_NAME, ITEM_SPEC, CUST_CODE, CAD_DATE, CAD_VER} = res.data.V_MES_PRODUCT[0]
                     const processArr = res.data.v_mes_gongxu
-                    // this.form.productNum = ITEM_CODE === null ? '' : ITEM_CODE
-                    // this.form.productName = ITEM_NAME === null ? '' : ITEM_NAME
-                    // this.form.productType = ITEM_SPEC === null ? '' : ITEM_SPEC
-                    // this.form.client = CUST_CODE === null ? '' : CUST_CODE
-                    // this.form.dateDraw = CAD_DATE === null ? '' : CAD_DATE.replace(/-/g, '/')
-                    // this.form.versionDraw = CAD_VER === null ? '' : CAD_VER
-                    this.form.productNum = ITEM_CODE
-                    this.form.productName = ITEM_NAME
-                    this.form.productType = ITEM_SPEC
-                    this.form.client = CUST_CODE
-                    this.form.dateDraw = CAD_DATE.replace(/-/g, '/')
-                    this.form.versionDraw = CAD_VER
+                    this.form.productNum = ITEM_CODE ?? ''
+                    this.form.productName = ITEM_NAME ?? ''
+                    this.form.productType = ITEM_SPEC ?? ''
+                    this.form.client = CUST_CODE ?? ''
+                    this.form.dateDraw = (CAD_DATE ?? '').replace(/-/g, '/')
                     // 没有成品工序
                     if(processArr.length === 0) {
                         return this.open('此工单没有工序信息')
@@ -261,12 +257,32 @@ export default {
                                 value = 'NG'
                             }
                             break
+                        case '等于':
+                            value = (INPUTVAL-0) === (QC_VALUE-0) ? 'OK' : 'NG'
+                            break
+                        case '小于':
+                            value = (INPUTVAL-0) < (QC_VALUE-0) ? 'OK' : 'NG'
+                            break
+                        case '小于等于':
+                            value = (INPUTVAL-0) <= (QC_VALUE-0) ? 'OK' : 'NG'
+                            break
+                        case '大于':
+                            value = (INPUTVAL-0) > (QC_VALUE-0) ? 'OK' : 'NG'
+                            break
                         case '大于等于':
                             value = (INPUTVAL-0) >= (QC_VALUE-0) ? 'OK' : 'NG'
                             break
+                        case '介于':
+                            {
+                                const nums = QC_VALUE.split('-')
+                                value = (INPUTVAL-0 > nums[0]-0 && INPUTVAL-0 < nums[1]-0) ? 'OK' : 'NG'
+                            }
+                            break
                         case '介于等于':
-                            const nums = QC_VALUE.split('-')
-                            value = (INPUTVAL-0 >= nums[0]-0 && INPUTVAL-0 <= nums[1]-0) ? 'OK' : 'NG'
+                            {
+                                const nums = QC_VALUE.split('-')
+                                value = (INPUTVAL-0 >= nums[0]-0 && INPUTVAL-0 <= nums[1]-0) ? 'OK' : 'NG'
+                            }
                             break
                         case '不判定':
                             value = 'OK'
@@ -318,7 +334,6 @@ export default {
                     let examineArr = res.data
                     // 每组数据加上输入框值和状态属性
                     examineArr.map(item => {
-                        // console.log(item)
                         item.INPUTVAL = '',
                         item.STATUS = ''
                     })
@@ -348,13 +363,16 @@ export default {
             formData.remark = this.remark
             formData.resExamine = this.resExamine
             formData.WS_DATA = this.tableData
-            // console.log(formData)
             this.$refs.form.validate(valid => {
                 if(valid){
                     axios.post(this.httpUrl + 'MES/QCProductend', formData)
                     .then(res => {
                         if(res.status === 200){
                             this.$message.success('品检结果保存成功！')
+                            // 驳回则调接口停机
+                            if(this.resExamine === 'N') {
+                                this.stopMachine()
+                            }
                             // 返回工单列表
                             this.$router.replace('/home/examworks')
                         }else {
@@ -388,6 +406,20 @@ export default {
         },
         showDraw() {
             // console.log(111)
+        },
+        stopMachine() {
+            let formdata = new FormData()
+            formdata.append('machineName', this.form.machine)
+            formdata.append('why', '首检审核不通过')
+            axios.post(this.killBrowserUrl + 'cmd/stopRun', formdata)
+            .then((res) => {
+                // console.log(res)
+                if(res.data.code === 200) {
+                    this.$message.success('机器停止运行')
+                } else {
+                    this.$message.error('停机失败，请手动关闭')
+                }
+            }).catch(err => err)
         }
     }
 }

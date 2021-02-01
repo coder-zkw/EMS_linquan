@@ -136,8 +136,8 @@ export default {
         },
         // 获取设备名称
         getEquipments() {
-            // axios.get('http://mengxuegu.com:7300/mock/5e6a16f0e7a1bb0518bb7477/aps/GetUser')
-            axios.get(this.httpUrl + 'MES/GetUser')
+            axios.get('http://localhost:50814/MES/GetUser')
+            // axios.get(this.httpUrl + 'MES/GetUser')
             .then((res) => {
                 // 此设备数据保留，待获取是否林全机台用
                 this.isDataLQ = res.data.machine
@@ -154,9 +154,10 @@ export default {
                 return
             }
             // 发送扫码结果到后台验证是否通过，并返回工号和姓名
-            axios.get(this.httpUrl + 'MES/GetLogin?uid='+value)
+            // axios.get(this.httpUrl + 'MES/GetLogin?uid='+value)
+            axios.get('http://localhost:50814/MES/GetLogin?uid='+value)
             .then(res => {
-                // console.log(res)
+                console.log(res)
                 if(res.data.code === 200) {
                     const result = res.data.data[0]
                     if(result.STATUS === '0') {

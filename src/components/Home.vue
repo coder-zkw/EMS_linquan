@@ -1,6 +1,6 @@
 <template>
     <div class="home">
-        <div class="header">
+        <!-- <div class="header">
             <div class="company">
                 <img src="../assets/logo.png" alt="林全科技">
                 <div>林全MES系统</div>
@@ -12,23 +12,23 @@
                 </el-tag>
                 <exit-btn :isFullscreen="isfullScreen"></exit-btn>
             </div>
-        </div>
+        </div> -->
         <div class="body">
             <router-view v-if="!isKeepAlive"></router-view>
             <keep-alive>
                 <router-view v-if="isKeepAlive"></router-view>
             </keep-alive>
         </div>
-        <div class="footer">
+        <!-- <div class="footer">
             Copyright © 2020 深圳市林全科技有限公司 版权所有
-        </div>
+        </div> -->
     </div>
 </template>
 <script>
-import ExitBtn from './ExitButton'
+// import ExitBtn from './ExitButton'
 
 export default {
-    components: { ExitBtn },
+    // components: { ExitBtn },
     data() {
         return {
             user: localStorage.getItem('operator'),
@@ -91,9 +91,9 @@ export default {
 .company img{
     width: 50px;
 }
-.body{
+/* .body{
     padding-top: 46px;
-}
+} */
 .footer{
     width: 100%;
     padding: 5px;

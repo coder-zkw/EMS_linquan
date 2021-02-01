@@ -211,7 +211,7 @@ export default {
             this.tableData = datas
           }
         }else{
-          this.$message.error('获取调机y数据失败！')
+          this.$message.error('获取调机数据失败！')
         }
       })
       .catch(err => err)

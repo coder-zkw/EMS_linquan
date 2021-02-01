@@ -54,7 +54,7 @@ export default {
             commands: [
                 {text: '调 机', path: '/home/work_order2', isHasMachine: true, author: '1'},
                 {text: '首 / 中 / 末检', path: '/home/examworks', isHasMachine: false, author: '2'},
-                {text: 'IPQC审核', path: '/home/audit', isHasMachine: false, author: '3'}
+                // {text: 'IPQC审核', path: '/home/audit', isHasMachine: false, author: '3'}
             ],
             selectMachineVisible: false,
             selectMachinePath: '',

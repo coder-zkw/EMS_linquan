@@ -154,6 +154,9 @@
                             <el-button type="success" v-show="staffRoles.length > 0" @click="commandSetSubmit">确定</el-button>
                         </div>
                     </el-tab-pane>
+                    <el-tab-pane label="白夜班时间管理" name="dayNight">
+                        <work-time/>
+                    </el-tab-pane>
                 </el-tabs>
             </div>
         </el-card>
@@ -161,8 +164,10 @@
 </template>
 <script>
 import axios from 'axios'
+import WorkTime from './sets/WorkTime'
 
 export default {
+    components: { WorkTime },
     data() {
         var validatePass = (rule, value, callback) => {
             if (value === '') {
@@ -248,8 +253,8 @@ export default {
             isAllCommands: false,
             commandsAll: false,
             setCommands: [],
-            httpUrl: 'http://mes.cn:7777/imes/',
-            killBrowserUrl: 'http://mes.cn:7777/smes/'
+            // httpUrl: 'http://mes.cn:7777/imes/',
+            // killBrowserUrl: 'http://mes.cn:7777/smes/'
         }
     },
     created() {

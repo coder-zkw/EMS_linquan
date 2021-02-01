@@ -102,7 +102,7 @@ export default {
             auditData: [],
             // 审核结果弹出框
             dialogResultVisible: false,
-            QP_ONLY: '',
+            currentRow: {},
             auditResult: false,
             timer: null,
             isAllCheck: true
@@ -113,12 +113,12 @@ export default {
     },
     methods: {
         detailAuditOrder(row) {
-            // console.log(row)
             this.detailData = row
             // for(let i = 0; i < this.columnsAll.length; i++) {
             //     this.detailData.push(row[this.columnsAll[i].c])
             // }
             // 获取品检结果信息列表
+            // axios.get('http://localhost:50814/MES/GetQcDetails?QP_ONLY='+ row.QP_ONLY)
             axios.get(this.httpUrl + 'MES/GetQcDetails?QP_ONLY='+ row.QP_ONLY)
             .then(res => {
                 // console.log(res)
@@ -132,6 +132,7 @@ export default {
         },
         // 获取品检完的工单列表
         getExamineWorks() {
+            // axios.get('http://localhost:50814/MES/GetQcProductEnd')
             axios.get(this.httpUrl + 'MES/GetQcProductEnd')
             .then(res => {
                 // console.log(res)
@@ -144,13 +145,17 @@ export default {
         },
         // 点击审核按钮，弹出审核结果备注提交框
         handleAuditResult(row) {
-            this.QP_ONLY = row.QP_ONLY
+            this.currentRow = row
             this.dialogResultVisible = true
         },
         // 提交审核结果，点击“通过”result为“Y”,点击“驳回”result为“N”
         auditResultSubmit(result){
+            if (result === 'N' && this.form.remark === '') {
+                return this.$message.warning('驳回备注不能为空！')
+            }
+            // axios.post('http://localhost:50814/MES/QcProductendPass', {
             axios.post(this.httpUrl + 'MES/QcProductendPass', {
-                "QP_ONLY": this.QP_ONLY,
+                "QP_ONLY": this.currentRow.QP_ONLY,
                 "QP_PASS": result,
                 "QP_QC_REMARK": this.form.remark,
                 "QP_QC_NAME": localStorage.getItem('operator')
@@ -160,12 +165,30 @@ export default {
                     this.$message.success('审核结果提交成功！')
                     // 更新列表
                     this.getExamineWorks()
+                    // 驳回则调接口停机
+                    if(result === 'N') {
+                        this.stopMachine()
+                    }
                 }else {
                     this.$message.error('审核结果提交失败！请重试')
                 }
             }).catch(err => err)
             this.dialogResultVisible = false
             this.form.remark = ''
+        },
+        stopMachine() {
+            let formdata = new FormData()
+            formdata.append('machineName', this.currentRow.QP_MACHINE)
+            formdata.append('why', '首检审核不通过')
+            axios.post(this.killBrowserUrl + 'cmd/stopRun', formdata)
+            .then((res) => {
+                // console.log(res)
+                if(res.data.code === 200) {
+                    this.$message.success('机器停止运行')
+                } else {
+                    this.$message.error('停机失败，请手动关闭')
+                }
+            }).catch(err => err)
         },
         resetRemark() {
             this.form.remark = ''

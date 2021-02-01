@@ -54,9 +54,9 @@ export default {
             }
             
             // 发送扫码结果到后台验证是否通过，并返回工号和姓名
+            // axios.get('http://localhost:50814/MES/GetLogin?uid='+value)
             axios.get(this.httpUrl + 'MES/GetLogin?uid='+value)
             .then(res => {
-                // console.log(res)
                 if(res.data.code === 200) {
                     const result = res.data.data[0]
                     if(result.STATUS === '0') {
